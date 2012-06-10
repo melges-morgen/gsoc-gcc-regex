@@ -170,9 +170,14 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 	}
       if (_M_state & _S_state_in_brace)
 	{
-	  _M_scan_in_brace();
+          _M_scan_in_brace();
 	  return;
 	}
+      if (_M_state & _S_state_in_bracket) 
+        {
+          _M_scan_in_bracket();
+          return;
+        }
 #if 0
       // TODO: re-enable line anchors when _M_assertion is implemented.
       // See PR libstdc++/47724
@@ -459,6 +464,34 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 	  _M_curToken = _S_token_backref;
 	  _M_curValue.assign(1, __c);
 	}
+      else if (__c == _M_ctype.widen('['))
+	{
+	  if (!(_M_flags & (regex_constants::basic | regex_constants::grep)))
+	    {
+	      _M_curToken = _S_token_ord_char;
+	      _M_curValue.assign(1, __c);
+	    }
+	  else
+	    {
+	      _M_curToken = _S_token_bracket_begin;
+	      _M_state |= _S_state_in_brace;
+	    }
+	}
+      else if (__c == _M_ctype.widen(']'))
+	{
+	  if (!(_M_flags & (regex_constants::basic | regex_constants::grep)))
+	    {
+	      _M_curToken = _S_token_ord_char;
+	      _M_curValue.assign(1, __c);
+	    }
+	  else
+	    {
+	      if (!(_M_state && _S_state_in_brace))
+		__throw_regex_error(regex_constants::error_badbrace);
+	      _M_state &= ~_S_state_in_brace;
+	      _M_curToken = _S_token_bracket_end;
+	    }
+	}
       else
 	__throw_regex_error(regex_constants::error_escape);
     }
@@ -648,6 +681,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       typedef typename _ScannerT::_TokenT                    _TokenT;
       typedef std::stack<_StateSeq, std::vector<_StateSeq> > _StackT;
       typedef _RangeMatcher<_InIter, _TraitsT>               _RMatcherT;
+      typedef _IntervalMatcher<_InIter, _TraitsT>             _IMatcherT;
 
       // accepts a specific token or returns false.
       bool
@@ -967,9 +1001,11 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 	{
 	  _RMatcherT __matcher(_M_match_token(_ScannerT::_S_token_line_begin),
 			       _M_traits);
+
 	  if (!_M_bracket_list(__matcher)
 	      || !_M_match_token(_ScannerT::_S_token_bracket_end))
 	    __throw_regex_error(regex_constants::error_brack);
+
 	  _M_stack.push(_StateSeq(_M_state_store,
 				  _M_state_store._M_insert_matcher(__matcher)));
 	  return true;
