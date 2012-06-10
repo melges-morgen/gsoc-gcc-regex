@@ -667,6 +667,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       typedef typename std::iterator_traits<_InIter>::value_type _CharT;
       typedef std::basic_string<_CharT>                          _StringT;
       typedef regex_constants::syntax_option_type                _FlagT;
+      typedef _IntervalMatcher<_InIter, _TraitsT>                _IMatcherT;
 
     public:
       _Compiler(const _InIter& __b, const _InIter& __e,
