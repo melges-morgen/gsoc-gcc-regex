@@ -459,6 +459,34 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 	  _M_curToken = _S_token_backref;
 	  _M_curValue.assign(1, __c);
 	}
+      else if (__c == _M_ctype.widen('['))
+	{
+	  if (!(_M_flags & (regex_constants::basic | regex_constants::grep)))
+	    {
+	      _M_curToken = _S_token_ord_char;
+	      _M_curValue.assign(1, __c);
+	    }
+	  else
+	    {
+	      _M_curToken = _S_token_bracket_begin;
+	      _M_state |= _S_state_in_brace;
+	    }
+	}
+      else if (__c == _M_ctype.widen(']'))
+	{
+	  if (!(_M_flags & (regex_constants::basic | regex_constants::grep)))
+	    {
+	      _M_curToken = _S_token_ord_char;
+	      _M_curValue.assign(1, __c);
+	    }
+	  else
+	    {
+	      if (!(_M_state && _S_state_in_brace))
+		__throw_regex_error(regex_constants::error_badbrace);
+	      _M_state &= ~_S_state_in_brace;
+	      _M_curToken = _S_token_bracket_end;
+	    }
+	}
       else
 	__throw_regex_error(regex_constants::error_escape);
     }
@@ -634,6 +662,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       typedef typename std::iterator_traits<_InIter>::value_type _CharT;
       typedef std::basic_string<_CharT>                          _StringT;
       typedef regex_constants::syntax_option_type                _FlagT;
+      typedef _IntervalMatcher<_InIter, _TraitsT>                _IMatcherT;
 
     public:
       _Compiler(const _InIter& __b, const _InIter& __e,
