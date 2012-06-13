@@ -173,11 +173,6 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
           _M_scan_in_brace();
 	  return;
 	}
-      if (_M_state & _S_state_in_bracket) 
-        {
-          _M_scan_in_bracket();
-          return;
-        }
 #if 0
       // TODO: re-enable line anchors when _M_assertion is implemented.
       // See PR libstdc++/47724
@@ -217,7 +212,8 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 	  _M_curToken = _S_token_or;
 	  ++_M_current;
 	  return;
-	}
+
+        }
       else if (__c == _M_ctype.widen('['))
 	{
 	  _M_curToken = _S_token_bracket_begin;
@@ -358,6 +354,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 	      return;
 	    }
 	}
+      printf("%c\n",* _M_current);
       _M_curToken = _S_token_collelem_single;
       _M_curValue.assign(1, *_M_current);
       ++_M_current;
@@ -667,7 +664,6 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       typedef typename std::iterator_traits<_InIter>::value_type _CharT;
       typedef std::basic_string<_CharT>                          _StringT;
       typedef regex_constants::syntax_option_type                _FlagT;
-      typedef _IntervalMatcher<_InIter, _TraitsT>                _IMatcherT;
 
     public:
       _Compiler(const _InIter& __b, const _InIter& __e,
@@ -699,7 +695,6 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
       bool
       _M_assertion();
-
       bool
       _M_quantifier();
 
@@ -1000,15 +995,15 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
     {
       if (_M_match_token(_ScannerT::_S_token_bracket_begin))
 	{
-	  _RMatcherT __matcher(_M_match_token(_ScannerT::_S_token_line_begin),
-			       _M_traits);
+	  printf("_M_bracket_expression\n");
+          //_IMatcherT __matcher(_M_match_token(_ScannerT::_S_token_line_begin),
+	//		       _M_traits);
 
-	  if (!_M_bracket_list(__matcher)
-	      || !_M_match_token(_ScannerT::_S_token_bracket_end))
-	    __throw_regex_error(regex_constants::error_brack);
+	 // if (!(_M_bracket_list(__matcher)))
+	  //  __throw_regex_error(regex_constants::error_brack);
 
-	  _M_stack.push(_StateSeq(_M_state_store,
-				  _M_state_store._M_insert_matcher(__matcher)));
+	  //_M_stack.push(_StateSeq(_M_state_store,
+	//			  _M_state_store._M_insert_matcher(__matcher)));
 	  return true;
 	}
       return false;
