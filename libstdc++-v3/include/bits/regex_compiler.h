@@ -301,14 +301,72 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
     _Scanner<_InputIterator>::
     _M_scan_in_bracket()
     {
-      if (_M_state & _S_state_at_start && *_M_current == _M_ctype.widen('^'))
+      // Check state, state_at_start is indicator that scaner after spec symbol
+      // ('[' or '-'  in current realisation)
+      if(_M_state & _S_state_at_start)
+      {
+        // After start of bracket expression or after '-' symbol cannot be '-'
+        // or ']'
+        if(*_M_current == _M_ctype.widen('-') || 
+            *_M_current == _M_ctype.widen(']'))
+        {
+          __throw_regex_error(regex_constants::error_badbrace);
+          _M_state &= ~_S_state_in_bracket;
+          _M_state &= ~_S_state_at_start;
+        } else {
+          // Else it symbol
+          _M_curToken = _S_token_collelem_single;
+          _M_curValue.assign(1, *_M_current);
+          _M_state &= ~_S_state_at_start;
+        }
+
+        ++_M_current;
+        return;
+      }
+
+      // Else try to eat a symbol or special character
+      
+      // Magic check of end
+      if(*_M_current == _M_end)
+      {
+        _M_curToken = _S_token_eof;
+        ++_M_current;
+        return;
+      } 
+      
+      // Check of dash
+      if(*_M_current == _M_ctype.widen('-')) 
+      {
+        _M_curToken = _S_token_dash;
+        _M_state |= _S_state_at_start;
+        ++_M_current;
+        return;
+      }
+      
+      // Check end of bracket expression
+      if(*_M_current == _M_ctype.widen(']'))
+      {
+        _M_state &= _S_state_in_bracket;
+        _M_curToken = _S_token_bracket_end;
+        ++_M_current;
+        return;
+      }
+
+      // By default eat symbol
+      _M_curToken = _S_token_collelem_single;
+      _M_curValue.assign(1, *_M_current);
+      ++_M_current;
+
+      // TODO (melges-morgen): scanning should create vector of tokens
+      /*if (_M_state & _S_state_at_start && *_M_current == _M_ctype.widen('^'))
 	{
 	  _M_curToken = _S_token_inverse_class;
 	  _M_state &= ~_S_state_at_start;
 	  ++_M_current;
 	  return;
 	}
-      else if (*_M_current == _M_ctype.widen('['))
+      else 
+      if (*_M_current == _M_ctype.widen('['))
 	{
 	  ++_M_current;
 	  if (_M_current == _M_end)
@@ -358,6 +416,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       _M_curToken = _S_token_collelem_single;
       _M_curValue.assign(1, *_M_current);
       ++_M_current;
+      */
     }
 
   template<typename _InputIterator>
