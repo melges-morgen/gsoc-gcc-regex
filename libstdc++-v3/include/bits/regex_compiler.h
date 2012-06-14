@@ -314,20 +314,23 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
           _M_state &= ~_S_state_in_bracket;
           _M_state &= ~_S_state_at_start;
         } else {
-          // Else it symbol
+          // Else it's a char.
           _M_curToken = _S_token_collelem_single;
-          _M_curValue.assign(1, *_M_current);
+          if (*(_M_current - 1) == _M_ctype.widen('['))
+            _M_curValue.assign(1, (*(_M_current++)));
+          else
+            _M_curValue += *(_M_current++);
           _M_state &= ~_S_state_at_start;
         }
 
-        ++_M_current;
+        _M_scan_in_bracket ();
         return;
       }
 
       // Else try to eat a symbol or special character
       
       // Magic check of end
-      if(*_M_current == _M_end)
+      if(*_M_current == *_M_end)
       {
         _M_curToken = _S_token_eof;
         ++_M_current;
@@ -340,7 +343,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
         _M_curToken = _S_token_dash;
         _M_state |= _S_state_at_start;
         ++_M_current;
-        return;
+        _M_scan_in_bracket ();
       }
       
       // Check end of bracket expression
@@ -354,8 +357,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
       // By default eat symbol
       _M_curToken = _S_token_collelem_single;
-      _M_curValue.assign(1, *_M_current);
-      ++_M_current;
+      _M_curValue += *(_M_current++);
 
       // TODO (melges-morgen): scanning should create vector of tokens
       /*if (_M_state & _S_state_at_start && *_M_current == _M_ctype.widen('^'))
@@ -417,6 +419,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       _M_curValue.assign(1, *_M_current);
       ++_M_current;
       */
+        _M_scan_in_bracket ();
     }
 
   template<typename _InputIterator>
@@ -830,8 +833,8 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
     { 
       if (token == _M_scanner._M_token())
 	{
-	  _M_cur_value = _M_scanner._M_value();
 	  _M_scanner._M_advance();
+	  _M_cur_value = _M_scanner._M_value();
 	  return true;
 	}
       return false;
@@ -1052,17 +1055,19 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
     _Compiler<_InIter, _TraitsT>::
     _M_bracket_expression()
     {
+
+      typedef typename _TraitsT::char_type char_type;
+      typedef std::pair<char_type, char_type> _M_PairT;
+
       if (_M_match_token(_ScannerT::_S_token_bracket_begin))
 	{
-	  printf("_M_bracket_expression\n");
-          //_IMatcherT __matcher(_M_match_token(_ScannerT::_S_token_line_begin),
-	//		       _M_traits);
+          _IMatcherT __matcher(_M_PairT(_M_cur_value[0], _M_cur_value[1]), _M_traits);
 
 	 // if (!(_M_bracket_list(__matcher)))
 	  //  __throw_regex_error(regex_constants::error_brack);
 
-	  //_M_stack.push(_StateSeq(_M_state_store,
-	//			  _M_state_store._M_insert_matcher(__matcher)));
+	  _M_stack.push(_StateSeq(_M_state_store,
+				  _M_state_store._M_insert_matcher(__matcher)));
 	  return true;
 	}
       return false;

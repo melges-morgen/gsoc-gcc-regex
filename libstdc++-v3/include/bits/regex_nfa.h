@@ -191,12 +191,12 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       typedef std::pair<char_type, char_type> _M_PairT;
 
       const _TraitsT& _M_traits;
-      _M_PairT        _M_c;
+      std::pair<char_type, char_type>        _M_c;
 
       explicit
-      _IntervalMatcher(_M_PairT __c, const _TraitsT& __t = _TraitsT())
-      : _M_traits(__t), _M_c(_M_traits.translate(__c.first()),
-          _M_traits.translate(__c.second()))
+      _IntervalMatcher(std::pair<char_type, char_type>& __cp, const _TraitsT& __t = _TraitsT())
+      : _M_c(__cp),  _M_traits(__t)
+
       {}
 
       bool
@@ -204,7 +204,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       {
 	typedef const _SpecializedCursor<_InIterT>& _CursorT;
 	_CursorT __c = static_cast<_CursorT>(__pc);
-        return _M_c.first () < __c && __c < _M_c.second();
+        return ((_M_c.first () < __c) && (__c < _M_c.second()));
       }
     };
 
