@@ -111,6 +111,176 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
   // Indicates if current state matches cursor current.
   typedef std::function<bool (const _PatternCursor&)> _Matcher;
 
+  template<typename _InIterT, typename _TraitsT>
+    struct _BaseToken
+    {
+      typedef typename _TraitsT::char_type char_type;
+
+      enum _Type
+      {
+        NegInterval,
+        NegChar,
+        Interval,
+        Char
+      };
+
+      _Type _type;
+
+      explicit
+      _BaseToken(const _TraitsT& __t = _TraitsT())
+      { }
+
+      virtual bool
+      operator()(char_type __c) const
+      { return true; }
+
+      _Type
+      _M_type()
+      { return _type; }
+
+      ~_BaseToken()
+      { }
+    
+    };
+
+  template<typename _InIterT, typename _TraitsT>
+    struct _IntervalToken: public _BaseToken<_InIterT, _TraitsT>
+    {
+      typedef typename _TraitsT::char_type char_type;
+      typedef std::pair<char_type, char_type> _M_PairT;
+
+      enum _Type
+      {
+        NegInterval,
+        NegChar,
+        Interval,
+        Char
+      };
+
+      _Type _type;
+
+      explicit
+      _IntervalToken(_M_PairT& __cp, bool is_negation,
+          const _TraitsT& __t = _TraitsT())
+      : _M_c(__cp), _M_negation(is_negation)
+      {
+        _type = is_negation ? _BaseToken<_InIterT, _TraitsT>::NegInterval :
+            _BaseToken<_InIterT, _TraitsT>::Interval;
+      }
+
+      _IntervalToken(_IntervalToken<_InIterT, _TraitsT>& _i)
+      : _M_c(_i._M_c), _M_negation(_i._M_negation) 
+      { }
+
+
+      virtual bool
+      operator()(char_type __c) const
+      {
+        return _M_negation ? !(_M_c.first <=__c && _M_c.second >= __c) :
+          _M_c.first <=__c && _M_c.second >= __c;
+      }
+
+      _M_PairT _M_c;
+      bool _M_negation;
+
+    };
+
+  template<typename _InIterT, typename _TraitsT>
+    struct _CharToken: public _BaseToken<_InIterT, _TraitsT>
+    {
+      typedef typename _TraitsT::char_type char_type;
+
+      enum _Type
+      {
+        NegInterval,
+        NegChar,
+        Interval,
+        Char
+      };
+
+      _Type _type;
+
+      explicit
+      _CharToken(char_type __c, bool is_negation,
+          const _TraitsT& __t = _TraitsT())
+      :_M_c(__c), _M_negation(is_negation)
+      { 
+        _type = is_negation ? _BaseToken<_InIterT, _TraitsT>::NegChar :
+            _BaseToken<_InIterT, _TraitsT>::Char;
+      }
+
+      _CharToken(_CharToken<_InIterT, _TraitsT>& _c)
+      : _M_c(_c._M_c), _M_negation(_c._M_negation)
+      { }
+
+      virtual bool
+      operator()(char_type __c) const
+      {
+        return _M_negation ? _M_c != __c : _M_c == __c;
+      }
+
+      char_type _M_c;
+      bool _M_negation;
+
+    };
+
+  template<typename _InIterT, typename _TraitsT>
+    struct _ClassToken
+    {
+      private:
+      typedef typename _TraitsT::char_type char_type;
+
+      typename _BaseToken<_InIterT, _TraitsT>::_Type _M_type ()
+      {
+        switch (_type)
+        {
+          case Interval:
+            return _iTok->_M_type();
+
+          case Char:
+            return *_cTok->_M_type();
+      }
+
+      enum
+      {
+        Char,
+        Interval
+      }_type;
+
+      _CharToken<_InIterT, _TraitsT> * _cTok;
+      _IntervalToken<_InIterT, _TraitsT> * _iTok;
+
+      public:
+      _ClassToken (_CharToken<_InIterT, _TraitsT>& _c)
+      { 
+        _M_type = Char;
+        _cTok = new _CharToken<_InIterT, _TraitsT>(_c);
+      }
+
+      _ClassToken (_IntervalToken<_InIterT, _TraitsT>& _i)
+      {
+        _M_type = Interval;
+        _iTok = new _IntervalToken<_InIterT, _TraitsT>(_i);
+      }
+
+      bool
+      operator()(char_type __c) const
+      {
+
+        switch (_type)
+        {
+          case Interval:
+            return (*_iTok)(__c);
+
+          case Char:
+            return (*_cTok)(__c);
+
+          default:
+            return false;
+        }
+      }
+    };
+
   // Matches any character
   inline bool
   _AnyMatcher(const _PatternCursor&)
@@ -189,22 +359,41 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
     {
       typedef typename _TraitsT::char_type char_type;
       typedef std::pair<char_type, char_type> _M_PairT;
+      typedef std::list<_BaseToken<_InIterT, _TraitsT>& > _M_TokenListT;
 
       _TraitsT& _M_traits;
-      std::pair<char_type, char_type>        _M_c;
+      _M_TokenListT        _M_l;
 
       explicit
-      _IntervalMatcher(_M_PairT& __cp, _TraitsT& __t = _TraitsT())
-      : _M_c(__cp),  _M_traits(__t)
+      _IntervalMatcher(_M_TokenListT& __l, _TraitsT& __t = _TraitsT())
+      : _M_l(__l),  _M_traits(__t)
       { }
 
       bool
       operator()(const _PatternCursor& __pc) const
       {
 	typedef const _SpecializedCursor<_InIterT>& _CursorT;
+
 	_CursorT __c = static_cast<_CursorT>(__pc);
         char_type __mc = _M_traits.translate(__c._M_current());
-        return _M_c.first <= __mc && _M_c.second >= __mc;
+
+        for (typename _M_TokenListT::iterator tok = _M_l.begin();
+                tok != _M_l.end(); tok++)
+        {
+          switch ((*tok)._M_type())
+          {
+            case _BaseToken<_InIterT, _TraitsT>::NegInterval:
+            case _BaseToken<_InIterT, _TraitsT>::NegChar:
+              if (!((*tok)(__c)))
+                return false;
+              else break;
+
+            default:
+              if (!(*tok)(__c))
+                return false;
+          }
+        }
+        return true;
       }
     };
 
