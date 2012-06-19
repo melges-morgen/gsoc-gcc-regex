@@ -1055,20 +1055,26 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
     _Compiler<_InIter, _TraitsT>::
     _M_bracket_expression()
     {
-
       typedef typename _TraitsT::char_type char_type;
       typedef std::pair<char_type, char_type> _M_PairT;
+      typedef std::vector<_TokenFactory<_TraitsT> > _M_TokenListT;
+      typedef _IntervalToken<_TraitsT> _ITok;
+      typedef _TokenFactory<_TraitsT> _TokFactory;
 
       if (_M_match_token(_ScannerT::_S_token_bracket_begin))
 	{
           _M_PairT cp(_M_cur_value[0], _M_cur_value[1]);
-          //_IMatcherT __matcher(cp, _M_traits);
+          _M_TokenListT __ml;
+          _ITok it(cp, false, _M_traits);
+          _TokFactory tf(it);
+          __ml.push_back(tf);
+          _IMatcherT __matcher(__ml, _M_traits);
 
 	  // if (!(_M_bracket_list(__matcher)))
 	  //   __throw_regex_error(regex_constants::error_brack);
 
-	  //_M_stack.push(_StateSeq(_M_state_store,
-		//		  _M_state_store._M_insert_matcher(__matcher)));
+	  _M_stack.push(_StateSeq(_M_state_store,
+				  _M_state_store._M_insert_matcher(__matcher)));
 	  return true;
 	}
       return false;

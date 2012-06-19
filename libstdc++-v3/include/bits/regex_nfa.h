@@ -23,10 +23,10 @@
 // <http://www.gnu.org/licenses/>.
 
 /**
- *  @file bits/regex_nfa.h
- *  This is an internal header file, included by other library headers.
- *  Do not attempt to use it directly. @headername{regex}
- */
+*  @file bits/regex_nfa.h
+*  This is an internal header file, included by other library headers.
+*  Do not attempt to use it directly. @headername{regex}
+*/
 
 namespace std _GLIBCXX_VISIBILITY(default)
 {
@@ -34,338 +34,317 @@ namespace __regex
 {
 _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
-  // Base class for, um, automata.  Could be an NFA or a DFA.  Your choice.
-  class _Automaton
-  {
-  public:
-    typedef unsigned int _SizeT;
+// Base class for, um, automata.  Could be an NFA or a DFA.  Your choice.
+class _Automaton
+{
+public:
+  typedef unsigned int _SizeT;
 
-  public:
-    virtual
-    ~_Automaton() { }
+public:
+  virtual
+  ~_Automaton() { }
 
-    virtual _SizeT
-    _M_sub_count() const = 0;
+  virtual _SizeT
+  _M_sub_count() const = 0;
 
 #ifdef _GLIBCXX_DEBUG
-    virtual std::ostream&
-    _M_dot(std::ostream& __ostr) const = 0;
+  virtual std::ostream&
+  _M_dot(std::ostream& __ostr) const = 0;
 #endif
-  };
+};
 
-  // Generic shared pointer to an automaton.  
-  typedef std::shared_ptr<_Automaton> _AutomatonPtr;
+// Generic shared pointer to an automaton.  
+typedef std::shared_ptr<_Automaton> _AutomatonPtr;
 
-  // Operation codes that define the type of transitions within the base NFA
-  // that represents the regular expression.
-  enum _Opcode
+// Operation codes that define the type of transitions within the base NFA
+// that represents the regular expression.
+enum _Opcode
+{
+    _S_opcode_unknown       =   0,
+    _S_opcode_alternative   =   1,
+    _S_opcode_subexpr_begin =   4,
+    _S_opcode_subexpr_end   =   5,
+    _S_opcode_match         = 100,
+    _S_opcode_accept        = 255
+};
+
+// Provides a generic facade for a templated match_results.
+struct _Results
+{
+  virtual void _M_set_pos(int __i, int __j, const _PatternCursor& __p) = 0;
+  virtual void _M_set_matched(int __i, bool __is_matched) = 0;
+};
+
+// Tags current state (for subexpr begin/end).
+typedef std::function<void (const _PatternCursor&, _Results&)> _Tagger;
+
+template<typename _FwdIterT, typename _TraitsT>
+  struct _StartTagger
   {
-      _S_opcode_unknown       =   0,
-      _S_opcode_alternative   =   1,
-      _S_opcode_subexpr_begin =   4,
-      _S_opcode_subexpr_end   =   5,
-      _S_opcode_match         = 100,
-      _S_opcode_accept        = 255
+    explicit
+    _StartTagger(int __i)
+    : _M_index(__i)
+    { }
+
+    void
+    operator()(const _PatternCursor& __pc, _Results& __r)
+    { __r._M_set_pos(_M_index, 0, __pc); }
+
+    int       _M_index;
   };
 
-  // Provides a generic facade for a templated match_results.
-  struct _Results
+template<typename _FwdIterT, typename _TraitsT>
+  struct _EndTagger
   {
-    virtual void _M_set_pos(int __i, int __j, const _PatternCursor& __p) = 0;
-    virtual void _M_set_matched(int __i, bool __is_matched) = 0;
+    explicit
+    _EndTagger(int __i)
+    : _M_index(__i)
+    { }
+
+    void
+    operator()(const _PatternCursor& __pc, _Results& __r)
+    { __r._M_set_pos(_M_index, 1, __pc); }
+
+    int       _M_index;
+    _FwdIterT _M_pos;
+  };
+// Indicates if current state matches cursor current.
+typedef std::function<bool (const _PatternCursor&)> _Matcher;
+
+struct _BaseToken
+{
+  public:
+    enum _Type
+    {
+      NegInterval,
+      NegChar,
+      Interval,
+      Char
+    };
+
+    _BaseToken()
+    { }
+
+    virtual ~_BaseToken()
+    { }
+
+    _Type _type;
+
+    virtual
+    _Type _M_type()
+    {
+      return _type;
+    }
+
+    bool _M_negation;
+};
+
+template<typename _TraitsT>
+  struct _IntervalToken: public _BaseToken
+  {
+    typedef typename _TraitsT::char_type char_type;
+    typedef std::pair<char_type, char_type> _M_PairT;
+
+    explicit
+    _IntervalToken(_M_PairT& __cp, bool is_negation,
+        const _TraitsT& __t = _TraitsT())
+    {
+      _M_c = __cp;
+      _M_negation = is_negation;
+      _type = is_negation ? _BaseToken::NegInterval: _BaseToken::Interval;
+    }
+
+    _IntervalToken(_IntervalToken<_TraitsT>& _i)
+    {
+      _M_c= _i._M_c;
+      _M_negation =_i._M_negation; 
+    }
+
+    virtual bool
+    operator()(char_type __c) const
+    {
+      return _M_negation ? !(_M_c.first <=__c && _M_c.second >= __c) :
+        _M_c.first <=__c && _M_c.second >= __c;
+    }
+
+    _M_PairT _M_c;
   };
 
-  // Tags current state (for subexpr begin/end).
-  typedef std::function<void (const _PatternCursor&, _Results&)> _Tagger;
+template<typename _TraitsT>
+  struct _CharToken: public _BaseToken
+  {
+    typedef typename _TraitsT::char_type char_type;
 
-  template<typename _FwdIterT, typename _TraitsT>
-    struct _StartTagger
+    explicit
+    _CharToken(char_type __c, bool is_negation,
+        const _TraitsT& __t = _TraitsT())
+    { 
+      _M_c =__c;
+      _M_negation = is_negation;
+      _type = is_negation ? _BaseToken::NegChar: _BaseToken::Char;
+    }
+
+    _CharToken(_CharToken<_TraitsT>& _c)
     {
-      explicit
-      _StartTagger(int __i)
-      : _M_index(__i)
-      { }
+      _M_c = _c._M_c;
+      _M_negation = _c._M_negation;
+    }
 
-      void
-      operator()(const _PatternCursor& __pc, _Results& __r)
-      { __r._M_set_pos(_M_index, 0, __pc); }
-
-      int       _M_index;
-    };
-
-  template<typename _FwdIterT, typename _TraitsT>
-    struct _EndTagger
+    virtual bool
+    operator()(char_type __c) const
     {
-      explicit
-      _EndTagger(int __i)
-      : _M_index(__i)
-      { }
+      return _M_negation ? _M_c != __c : _M_c == __c;
+    }
 
-      void
-      operator()(const _PatternCursor& __pc, _Results& __r)
-      { __r._M_set_pos(_M_index, 1, __pc); }
+    char_type _M_c;
+  };
 
-      int       _M_index;
-      _FwdIterT _M_pos;
-    };
-  // Indicates if current state matches cursor current.
-  typedef std::function<bool (const _PatternCursor&)> _Matcher;
+template<typename _TraitsT>
+  struct _TokenFactory: public _BaseToken
+  {
+    typedef typename _TraitsT::char_type char_type;
 
-  template<typename _InIterT, typename _TraitsT>
-    struct _BaseToken
+    _TokenFactory(_CharToken<_TraitsT>& _c)
+    { 
+      _M_type = Char;
+      _cTok = new _CharToken<_TraitsT>(_c);
+    }
+
+    _TokenFactory(_IntervalToken<_TraitsT>& _i)
     {
-      typedef typename _TraitsT::char_type char_type;
+      _type = Interval;
+      _iTok = new _IntervalToken<_TraitsT>(_i);
+    }
 
-      enum _Type
-      {
-        NegInterval,
-        NegChar,
-        Interval,
-        Char
-      };
-
-      _Type _type;
-
-      explicit
-      _BaseToken(const _TraitsT& __t = _TraitsT())
-      { }
-
-      virtual bool
-      operator()(char_type __c) const
-      { return true; }
-
-      _Type
-      _M_type()
-      { return _type; }
-
-      ~_BaseToken()
-      { }
-    
-    };
-
-  template<typename _InIterT, typename _TraitsT>
-    struct _IntervalToken: public _BaseToken<_InIterT, _TraitsT>
+    //_TokenFactory(_TokenFactory<_TraitsT>)
+    bool
+    operator()(char_type __c) const
     {
-      typedef typename _TraitsT::char_type char_type;
-      typedef std::pair<char_type, char_type> _M_PairT;
 
-      enum _Type
+      switch (_type)
       {
-        NegInterval,
-        NegChar,
-        Interval,
-        Char
-      };
+        case Interval:
+        case NegInterval:
+          return (*_iTok)(__c);
 
-      _Type _type;
+        case Char:
+        case NegChar:
+          return (*_cTok)(__c);
 
-      explicit
-      _IntervalToken(_M_PairT& __cp, bool is_negation,
-          const _TraitsT& __t = _TraitsT())
-      : _M_c(__cp), _M_negation(is_negation)
-      {
-        _type = is_negation ? _BaseToken<_InIterT, _TraitsT>::NegInterval :
-            _BaseToken<_InIterT, _TraitsT>::Interval;
+        default:
+          return false;
       }
+    }
 
-      _IntervalToken(_IntervalToken<_InIterT, _TraitsT>& _i)
-      : _M_c(_i._M_c), _M_negation(_i._M_negation) 
-      { }
-
-
-      virtual bool
-      operator()(char_type __c) const
-      {
-        return _M_negation ? !(_M_c.first <=__c && _M_c.second >= __c) :
-          _M_c.first <=__c && _M_c.second >= __c;
-      }
-
-      _M_PairT _M_c;
-      bool _M_negation;
-
-    };
-
-  template<typename _InIterT, typename _TraitsT>
-    struct _CharToken: public _BaseToken<_InIterT, _TraitsT>
+    _Type _M_type ()
     {
-      typedef typename _TraitsT::char_type char_type;
-
-      enum _Type
+      switch (_type)
       {
-        NegInterval,
-        NegChar,
-        Interval,
-        Char
-      };
+        case Interval:
+        case NegInterval:
+          return _iTok->_M_type();
 
-      _Type _type;
-
-      explicit
-      _CharToken(char_type __c, bool is_negation,
-          const _TraitsT& __t = _TraitsT())
-      :_M_c(__c), _M_negation(is_negation)
-      { 
-        _type = is_negation ? _BaseToken<_InIterT, _TraitsT>::NegChar :
-            _BaseToken<_InIterT, _TraitsT>::Char;
+        case Char:
+        case NegChar:
+          return _cTok->_M_type();
       }
+    }
 
-      _CharToken(_CharToken<_InIterT, _TraitsT>& _c)
-      : _M_c(_c._M_c), _M_negation(_c._M_negation)
-      { }
+    private:
 
-      virtual bool
-      operator()(char_type __c) const
-      {
-        return _M_negation ? _M_c != __c : _M_c == __c;
-      }
+    _CharToken<_TraitsT> * _cTok;
+    _IntervalToken<_TraitsT> * _iTok;
 
-      char_type _M_c;
-      bool _M_negation;
 
-    };
+  };
 
-  template<typename _InIterT, typename _TraitsT>
-    struct _ClassToken
+
+// Matches any character
+inline bool
+_AnyMatcher(const _PatternCursor&)
+{ return true; }
+
+// Matches a single character
+template<typename _InIterT, typename _TraitsT>
+  struct _CharMatcher
+  {
+    typedef typename _TraitsT::char_type char_type;
+
+    explicit
+    _CharMatcher(char_type __c, const _TraitsT& __t = _TraitsT())
+    : _M_traits(__t), _M_c(_M_traits.translate(__c))
+    { }
+
+    bool
+    operator()(const _PatternCursor& __pc) const
     {
-      private:
-      typedef typename _TraitsT::char_type char_type;
+      typedef const _SpecializedCursor<_InIterT>& _CursorT;
+      _CursorT __c = static_cast<_CursorT>(__pc);
+      return _M_traits.translate(__c._M_current()) == _M_c;
+    }
 
-      typename _BaseToken<_InIterT, _TraitsT>::_Type _M_type ()
-      {
-        switch (_type)
-        {
-          case Interval:
-            return _iTok->_M_type();
+    const _TraitsT& _M_traits;
+    char_type       _M_c;
+  };
 
-          case Char:
-            return *_cTok->_M_type();
-      }
+// Matches a character range (bracket expression)
+template<typename _InIterT, typename _TraitsT>
+  struct _RangeMatcher
+  {
+    typedef typename _TraitsT::char_type _CharT;
+    typedef std::basic_string<_CharT>    _StringT;
 
-      enum
-      {
-        Char,
-        Interval
-      }_type;
+    explicit
+    _RangeMatcher(bool __is_non_matching, const _TraitsT& __t = _TraitsT())
+    : _M_traits(__t), _M_is_non_matching(__is_non_matching)
+    { }
 
-      _CharToken<_InIterT, _TraitsT> * _cTok;
-      _IntervalToken<_InIterT, _TraitsT> * _iTok;
-
-      public:
-      _ClassToken (_CharToken<_InIterT, _TraitsT>& _c)
-      { 
-        _M_type = Char;
-        _cTok = new _CharToken<_InIterT, _TraitsT>(_c);
-      }
-
-      _ClassToken (_IntervalToken<_InIterT, _TraitsT>& _i)
-      {
-        _M_type = Interval;
-        _iTok = new _IntervalToken<_InIterT, _TraitsT>(_i);
-      }
-
-      bool
-      operator()(char_type __c) const
-      {
-
-        switch (_type)
-        {
-          case Interval:
-            return (*_iTok)(__c);
-
-          case Char:
-            return (*_cTok)(__c);
-
-          default:
-            return false;
-        }
-      }
-    };
-
-  // Matches any character
-  inline bool
-  _AnyMatcher(const _PatternCursor&)
-  { return true; }
-
-  // Matches a single character
-  template<typename _InIterT, typename _TraitsT>
-    struct _CharMatcher
+    bool
+    operator()(const _PatternCursor& __pc) const
     {
-      typedef typename _TraitsT::char_type char_type;
+      typedef const _SpecializedCursor<_InIterT>& _CursorT;
+      _CursorT __c = static_cast<_CursorT>(__pc);
+      return true;
+    }
 
-      explicit
-      _CharMatcher(char_type __c, const _TraitsT& __t = _TraitsT())
-      : _M_traits(__t), _M_c(_M_traits.translate(__c))
-      { }
+    void
+    _M_add_char(_CharT __c)
+    { }
 
-      bool
-      operator()(const _PatternCursor& __pc) const
-      {
-	typedef const _SpecializedCursor<_InIterT>& _CursorT;
-	_CursorT __c = static_cast<_CursorT>(__pc);
-	return _M_traits.translate(__c._M_current()) == _M_c;
-      }
+    void
+    _M_add_collating_element(const _StringT& __s)
+    { }
 
-      const _TraitsT& _M_traits;
-      char_type       _M_c;
-    };
+    void
+    _M_add_equivalence_class(const _StringT& __s)
+    { }
 
-  // Matches a character range (bracket expression)
-  template<typename _InIterT, typename _TraitsT>
-    struct _RangeMatcher
-    {
-      typedef typename _TraitsT::char_type _CharT;
-      typedef std::basic_string<_CharT>    _StringT;
+    void
+    _M_add_character_class(const _StringT& __s)
+    { }
 
-      explicit
-      _RangeMatcher(bool __is_non_matching, const _TraitsT& __t = _TraitsT())
-      : _M_traits(__t), _M_is_non_matching(__is_non_matching)
-      { }
+    void
+    _M_make_range()
+    { }
 
-      bool
-      operator()(const _PatternCursor& __pc) const
-      {
-	typedef const _SpecializedCursor<_InIterT>& _CursorT;
-	_CursorT __c = static_cast<_CursorT>(__pc);
-	return true;
-      }
+    const _TraitsT& _M_traits;
+    bool            _M_is_non_matching;
+  };
 
-      void
-      _M_add_char(_CharT __c)
-      { }
+// Matches a character interval ([a-z] bracket expression)
+template<typename _InIterT, typename _TraitsT>
+  struct _IntervalMatcher
+  {
+    typedef typename _TraitsT::char_type char_type;
+    typedef std::pair<char_type, char_type> _M_PairT;
+    typedef std::vector<_TokenFactory<_TraitsT> > _M_TokenListT;
+    typedef typename std::vector<_TokenFactory<_TraitsT> >::const_iterator tokIt;
 
-      void
-      _M_add_collating_element(const _StringT& __s)
-      { }
+    _TraitsT& _M_traits;
+    _M_TokenListT        _M_l;
 
-      void
-      _M_add_equivalence_class(const _StringT& __s)
-      { }
-
-      void
-      _M_add_character_class(const _StringT& __s)
-      { }
-
-      void
-      _M_make_range()
-      { }
-
-      const _TraitsT& _M_traits;
-      bool            _M_is_non_matching;
-    };
-
-  // Matches a character interval ([a-z] bracket expression)
-  template<typename _InIterT, typename _TraitsT>
-    struct _IntervalMatcher
-    {
-      typedef typename _TraitsT::char_type char_type;
-      typedef std::pair<char_type, char_type> _M_PairT;
-      typedef std::list<_BaseToken<_InIterT, _TraitsT>& > _M_TokenListT;
-
-      _TraitsT& _M_traits;
-      _M_TokenListT        _M_l;
-
-      explicit
-      _IntervalMatcher(_M_TokenListT& __l, _TraitsT& __t = _TraitsT())
+    explicit
+    _IntervalMatcher(_M_TokenListT __l, _TraitsT& __t = _TraitsT())
       : _M_l(__l),  _M_traits(__t)
       { }
 
@@ -377,13 +356,13 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 	_CursorT __c = static_cast<_CursorT>(__pc);
         char_type __mc = _M_traits.translate(__c._M_current());
 
-        for (typename _M_TokenListT::iterator tok = _M_l.begin();
+        for (tokIt tok = _M_l.begin();
                 tok != _M_l.end(); tok++)
         {
-          switch ((*tok)._M_type())
+          switch (tok->_M_type())
           {
-            case _BaseToken<_InIterT, _TraitsT>::NegInterval:
-            case _BaseToken<_InIterT, _TraitsT>::NegChar:
+            case _TokenFactory<_TraitsT>::NegInterval:
+            case _TokenFactory<_TraitsT>::NegChar:
               if (!((*tok)(__c)))
                 return false;
               else break;
