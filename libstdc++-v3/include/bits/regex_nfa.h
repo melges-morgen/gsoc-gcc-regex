@@ -122,21 +122,22 @@ struct _BaseToken
       Char
     };
 
-    _BaseToken()
+    _BaseToken(_Type _t, bool is_negation )
+      : _type(_t), _M_negation(is_negation)
     { }
 
     virtual ~_BaseToken()
     { }
 
-    _Type _type;
+    const _Type _type;
 
     virtual
-    _Type _M_type()
+    _Type _M_type() const
     {
       return _type;
     }
 
-    bool _M_negation;
+    const bool _M_negation;
 };
 
 template<typename _TraitsT>
@@ -146,28 +147,22 @@ template<typename _TraitsT>
     typedef std::pair<char_type, char_type> _M_PairT;
 
     explicit
-    _IntervalToken(_M_PairT& __cp, bool is_negation,
-        const _TraitsT& __t = _TraitsT())
-    {
-      _M_c = __cp;
-      _M_negation = is_negation;
-      _type = is_negation ? _BaseToken::NegInterval: _BaseToken::Interval;
-    }
+    _IntervalToken(const _M_PairT& __cp, const bool is_negation)
+       : _BaseToken(is_negation ? NegInterval : Interval, is_negation), _M_c(__cp)
+    { }
 
-    _IntervalToken(_IntervalToken<_TraitsT>& _i)
-    {
-      _M_c= _i._M_c;
-      _M_negation =_i._M_negation; 
-    }
+    _IntervalToken(const _IntervalToken<_TraitsT>& _i)
+      : _BaseToken(_i._M_type(), _i._M_negation), _M_c(_i._M_c) 
+    { }
 
-    virtual bool
-    operator()(char_type __c) const
+    bool
+    operator()(const char_type __c) const
     {
       return _M_negation ? !(_M_c.first <=__c && _M_c.second >= __c) :
         _M_c.first <=__c && _M_c.second >= __c;
     }
 
-    _M_PairT _M_c;
+    const _M_PairT _M_c;
   };
 
 template<typename _TraitsT>
@@ -176,27 +171,21 @@ template<typename _TraitsT>
     typedef typename _TraitsT::char_type char_type;
 
     explicit
-    _CharToken(char_type __c, bool is_negation,
-        const _TraitsT& __t = _TraitsT())
-    { 
-      _M_c =__c;
-      _M_negation = is_negation;
-      _type = is_negation ? _BaseToken::NegChar: _BaseToken::Char;
-    }
+    _CharToken(const char_type __c, const bool is_negation)
+       : _BaseToken(is_negation ? NegChar : Char, is_negation), _M_c(__c)
+    { }
 
-    _CharToken(_CharToken<_TraitsT>& _c)
-    {
-      _M_c = _c._M_c;
-      _M_negation = _c._M_negation;
-    }
+    _CharToken(const _CharToken<_TraitsT>& _c)
+      : _BaseToken(_c._M_type(), _c._M_negation), _M_c(_c._M_c) 
+    { }
 
-    virtual bool
-    operator()(char_type __c) const
+    bool
+    operator()(const char_type __c) const
     {
       return _M_negation ? _M_c != __c : _M_c == __c;
     }
 
-    char_type _M_c;
+    const char_type _M_c;
   };
 
 template<typename _TraitsT>
@@ -204,21 +193,18 @@ template<typename _TraitsT>
   {
     typedef typename _TraitsT::char_type char_type;
 
-    _TokenFactory(_CharToken<_TraitsT>& _c)
-    { 
-      _M_type = Char;
-      _cTok = new _CharToken<_TraitsT>(_c);
-    }
+    _TokenFactory(const _CharToken<_TraitsT>& _c)
+      : _BaseToken(_c._M_type(), _c._M_negation),
+        _cTok(new _CharToken<_TraitsT>(_c))
+    { }
 
-    _TokenFactory(_IntervalToken<_TraitsT>& _i)
-    {
-      _type = Interval;
-      _iTok = new _IntervalToken<_TraitsT>(_i);
-    }
+    _TokenFactory(const _IntervalToken<_TraitsT>& _i)
+      : _BaseToken(_i._M_type(), _i._M_negation),
+        _iTok(new _IntervalToken<_TraitsT>(_i))
+    { }
 
-    //_TokenFactory(_TokenFactory<_TraitsT>)
     bool
-    operator()(char_type __c) const
+    operator()(const char_type __c) const
     {
 
       switch (_type)
@@ -236,7 +222,7 @@ template<typename _TraitsT>
       }
     }
 
-    _Type _M_type ()
+    _Type _M_type () const
     {
       switch (_type)
       {
@@ -252,8 +238,8 @@ template<typename _TraitsT>
 
     private:
 
-    _CharToken<_TraitsT> * _cTok;
-    _IntervalToken<_TraitsT> * _iTok;
+    const std::shared_ptr<_CharToken<_TraitsT> > _cTok;
+    const std::shared_ptr<_IntervalToken<_TraitsT> > _iTok;
 
 
   };
@@ -359,16 +345,16 @@ template<typename _InIterT, typename _TraitsT>
         for (tokIt tok = _M_l.begin();
                 tok != _M_l.end(); tok++)
         {
-          switch (tok->_M_type())
+          switch ((*tok)._M_type())
           {
             case _TokenFactory<_TraitsT>::NegInterval:
             case _TokenFactory<_TraitsT>::NegChar:
-              if (!((*tok)(__c)))
+              if (!((*tok)(__mc)))
                 return false;
               else break;
 
             default:
-              if (!(*tok)(__c))
+              if (!(*tok)(__mc))
                 return false;
           }
         }

@@ -1063,11 +1063,9 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
       if (_M_match_token(_ScannerT::_S_token_bracket_begin))
 	{
-          _M_PairT cp(_M_cur_value[0], _M_cur_value[1]);
+          const _M_PairT cp(_M_cur_value[0], _M_cur_value[1]);
           _M_TokenListT __ml;
-          _ITok it(cp, false, _M_traits);
-          _TokFactory tf(it);
-          __ml.push_back(tf);
+          __ml.push_back(_TokFactory(_ITok(cp, false)));
           _IMatcherT __matcher(__ml, _M_traits);
 
 	  // if (!(_M_bracket_list(__matcher)))
