@@ -342,7 +342,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       {
         _M_curToken = _S_token_dash;
         _M_state |= _S_state_at_start;
-        ++_M_current;
+        _M_curValue += *(_M_current++);
         _M_scan_in_bracket ();
       }
       
@@ -740,7 +740,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       typedef typename _ScannerT::_TokenT                    _TokenT;
       typedef std::stack<_StateSeq, std::vector<_StateSeq> > _StackT;
       typedef _RangeMatcher<_InIter, _TraitsT>               _RMatcherT;
-      typedef _IntervalMatcher<_InIter, _TraitsT>             _IMatcherT;
+      typedef _IntervalMatcher<_InIter, _TraitsT>            _IMatcherT;
 
       // accepts a specific token or returns false.
       bool
@@ -1060,12 +1060,27 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       typedef std::vector<_TokenFactory<_TraitsT> > _M_TokenListT;
       typedef _IntervalToken<_TraitsT> _ITok;
       typedef _TokenFactory<_TraitsT> _TokFactory;
+      typedef const std::ctype<typename std::iterator_traits<_InIter>::value_type> _CtypeT;
+      _CtypeT _M_ctype;
+
 
       if (_M_match_token(_ScannerT::_S_token_bracket_begin))
 	{
+
           const _M_PairT cp(_M_cur_value[0], _M_cur_value[1]);
           _M_TokenListT __ml;
-          __ml.push_back(_TokFactory(_ITok(cp, false)));
+          
+          bool negation = false;
+          for (int i = 0; i< _M_cur_value.length(); i++)    
+            {
+              if (_M_cur_value[i] == _M_ctype.widen('^'))
+                negation = true;
+              else if (_M_cur_value[i] == _M_ctype.widen('-'))
+                __ml.push_back(_TokFactory(_M_cur_value[i-1], _M_cur_value[++i], negation));
+              else if ((_M_cur_value[i + 1] == _M_ctype.widen('-'))
+                  || (_M_cur_value[i + 1] == _M_ctype.widen('^')))
+                __ml.push_back(_TokFactory(_M_cur_value[i], negation));
+            }
           _IMatcherT __matcher(__ml, _M_traits);
 
 	  // if (!(_M_bracket_list(__matcher)))

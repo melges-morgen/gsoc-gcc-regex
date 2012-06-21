@@ -122,14 +122,12 @@ struct _BaseToken
       Char
     };
 
-    _BaseToken(_Type _t, bool is_negation )
-      : _type(_t), _M_negation(is_negation)
+    _BaseToken(_Type __t, bool __negation )
+      : _type(__t), _M_negation(__negation)
     { }
 
     virtual ~_BaseToken()
     { }
-
-    const _Type _type;
 
     virtual
     _Type _M_type() const
@@ -137,6 +135,7 @@ struct _BaseToken
       return _type;
     }
 
+    const _Type _type;
     const bool _M_negation;
 };
 
@@ -147,12 +146,12 @@ template<typename _TraitsT>
     typedef std::pair<char_type, char_type> _M_PairT;
 
     explicit
-    _IntervalToken(const _M_PairT& __cp, const bool is_negation)
-       : _BaseToken(is_negation ? NegInterval : Interval, is_negation), _M_c(__cp)
+    _IntervalToken(const _M_PairT& __cp, const bool __negation)
+       : _BaseToken(__negation ? NegInterval : Interval, __negation), _M_c(__cp)
     { }
 
-    _IntervalToken(const _IntervalToken<_TraitsT>& _i)
-      : _BaseToken(_i._M_type(), _i._M_negation), _M_c(_i._M_c) 
+    _IntervalToken(const _IntervalToken<_TraitsT>& __i)
+      : _BaseToken(__i._M_type(), __i._M_negation), _M_c(__i._M_c) 
     { }
 
     bool
@@ -171,12 +170,12 @@ template<typename _TraitsT>
     typedef typename _TraitsT::char_type char_type;
 
     explicit
-    _CharToken(const char_type __c, const bool is_negation)
-       : _BaseToken(is_negation ? NegChar : Char, is_negation), _M_c(__c)
+    _CharToken(const char_type __c, const bool __negation)
+       : _BaseToken(__negation ? NegChar : Char, __negation), _M_c(__c)
     { }
 
-    _CharToken(const _CharToken<_TraitsT>& _c)
-      : _BaseToken(_c._M_type(), _c._M_negation), _M_c(_c._M_c) 
+    _CharToken(const _CharToken<_TraitsT>& __c)
+      : _BaseToken(__c._M_type(), __c._M_negation), _M_c(__c._M_c) 
     { }
 
     bool
@@ -193,14 +192,25 @@ template<typename _TraitsT>
   {
     typedef typename _TraitsT::char_type char_type;
 
-    _TokenFactory(const _CharToken<_TraitsT>& _c)
-      : _BaseToken(_c._M_type(), _c._M_negation),
-        _cTok(new _CharToken<_TraitsT>(_c))
+    _TokenFactory(const _CharToken<_TraitsT>& __c)
+      : _BaseToken(__c._M_type(), __c._M_negation),
+        _cTok(new _CharToken<_TraitsT>(__c))
     { }
 
-    _TokenFactory(const _IntervalToken<_TraitsT>& _i)
-      : _BaseToken(_i._M_type(), _i._M_negation),
-        _iTok(new _IntervalToken<_TraitsT>(_i))
+    _TokenFactory(const char_type __c, bool __negation)
+      : _BaseToken(__negation? NegChar:Char, __negation),
+        _cTok(new _CharToken<_TraitsT>(__c, __negation))
+    { }
+
+    _TokenFactory(const _IntervalToken<_TraitsT>& __i)
+      : _BaseToken(__i._M_type(), __i._M_negation),
+        _iTok(new _IntervalToken<_TraitsT>(__i))
+    { }
+
+    _TokenFactory(const char_type __cl, const char_type __cr,
+        bool __negation)
+      : _BaseToken(__negation ? NegInterval:Interval, __negation),
+        _cTok(new _IntervalToken<_TraitsT>(_M_PairT(__cl, __cr), __negation))
     { }
 
     bool
@@ -326,8 +336,8 @@ template<typename _InIterT, typename _TraitsT>
     typedef std::vector<_TokenFactory<_TraitsT> > _M_TokenListT;
     typedef typename std::vector<_TokenFactory<_TraitsT> >::const_iterator tokIt;
 
-    _TraitsT& _M_traits;
-    _M_TokenListT        _M_l;
+    _TraitsT&           _M_traits;
+    _M_TokenListT       _M_l;
 
     explicit
     _IntervalMatcher(_M_TokenListT __l, _TraitsT& __t = _TraitsT())
@@ -342,6 +352,7 @@ template<typename _InIterT, typename _TraitsT>
 	_CursorT __c = static_cast<_CursorT>(__pc);
         char_type __mc = _M_traits.translate(__c._M_current());
 
+        bool _ret_code = false;
         for (tokIt tok = _M_l.begin();
                 tok != _M_l.end(); tok++)
         {
@@ -354,11 +365,11 @@ template<typename _InIterT, typename _TraitsT>
               else break;
 
             default:
-              if (!(*tok)(__mc))
-                return false;
+              if ((*tok)(__mc))
+                _ret_code = true;
           }
         }
-        return true;
+        return _ret_code;
       }
     };
 
