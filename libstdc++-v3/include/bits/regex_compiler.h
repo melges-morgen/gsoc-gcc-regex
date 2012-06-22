@@ -113,6 +113,9 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       _M_token() const
       { return _M_curToken; }
 
+      const _CtypeT& _Get_ctype() const
+      { return _M_ctype;}
+
       const _StringT&
       _M_value() const
       { return _M_curValue; }
@@ -1058,12 +1061,10 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       typedef typename _TraitsT::char_type char_type;
       typedef std::pair<char_type, char_type> _M_PairT;
       typedef std::vector<_TokenFactory<_TraitsT> > _M_TokenListT;
-      typedef _IntervalToken<_TraitsT> _ITok;
       typedef _TokenFactory<_TraitsT> _TokFactory;
-      typedef const std::ctype<typename std::iterator_traits<_InIter>::value_type> _CtypeT;
-      _CtypeT _M_ctype;
 
-
+      // TODO(slega): remove Get_ctype() function from scanner
+      // and add local ctype decloration here.
       if (_M_match_token(_ScannerT::_S_token_bracket_begin))
 	{
 
@@ -1073,12 +1074,12 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
           bool negation = false;
           for (int i = 0; i< _M_cur_value.length(); i++)    
             {
-              if (_M_cur_value[i] == _M_ctype.widen('^'))
+              if (_M_cur_value[i] == _M_scanner._Get_ctype().widen('^'))
                 negation = true;
-              else if (_M_cur_value[i] == _M_ctype.widen('-'))
+              else if (_M_cur_value[i] == _M_scanner._Get_ctype().widen('-'))
                 __ml.push_back(_TokFactory(_M_cur_value[i-1], _M_cur_value[++i], negation));
-              else if ((_M_cur_value[i + 1] == _M_ctype.widen('-'))
-                  || (_M_cur_value[i + 1] == _M_ctype.widen('^')))
+              else if ((_M_cur_value[i + 1] == _M_scanner._Get_ctype().widen('-'))
+                  || (_M_cur_value[i + 1] == _M_scanner._Get_ctype().widen('^')))
                 __ml.push_back(_TokFactory(_M_cur_value[i], negation));
             }
           _IMatcherT __matcher(__ml, _M_traits);

@@ -191,6 +191,7 @@ template<typename _TraitsT>
   struct _TokenFactory: public _BaseToken
   {
     typedef typename _TraitsT::char_type char_type;
+    typedef std::pair<char_type, char_type> _M_PairT;
 
     _TokenFactory(const _CharToken<_TraitsT>& __c)
       : _BaseToken(__c._M_type(), __c._M_negation),
@@ -204,13 +205,13 @@ template<typename _TraitsT>
 
     _TokenFactory(const _IntervalToken<_TraitsT>& __i)
       : _BaseToken(__i._M_type(), __i._M_negation),
-        _iTok(new _IntervalToken<_TraitsT>(__i))
+        _cTok(new _IntervalToken<_TraitsT>(__i))
     { }
 
     _TokenFactory(const char_type __cl, const char_type __cr,
         bool __negation)
       : _BaseToken(__negation ? NegInterval:Interval, __negation),
-        _cTok(new _IntervalToken<_TraitsT>(_M_PairT(__cl, __cr), __negation))
+        _iTok(new _IntervalToken<_TraitsT>(_M_PairT(__cl, __cr), __negation))
     { }
 
     bool
