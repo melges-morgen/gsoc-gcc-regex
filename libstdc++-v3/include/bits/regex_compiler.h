@@ -355,8 +355,11 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
                   _M_curValue += *_M_current;
                 }
             }
+          else
+            {
+              _M_curValue += *_M_current;
+            }
 
-          _M_curValue += *(_M_current++);
         }
     }
 
