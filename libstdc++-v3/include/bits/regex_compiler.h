@@ -301,7 +301,6 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
     _Scanner<_InputIterator>::
     _M_scan_in_bracket()
     {
-      _M_curToken = _S_token_collelem_single;
       if(*_M_current == _M_ctype.widen('^'))
         {
           if(*(_M_current + 1) == _M_ctype.widen(']') || 
@@ -325,10 +324,21 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
       
       _M_curValue += *(_M_current++);
-      _M_state &= ~_S_state_at_start;
-
-      for( ; _M_state & _S_state_in_bracket; _M_current++)
+      
+      for(_M_state &= ~_S_state_at_start; _M_state & _S_state_in_bracket; _M_current++)
         {
+          if(*_M_current == _M_ctype.widen('\\')) 
+            {
+              if(*(_M_current + 1) == *_M_end)
+                continue;
+              else
+                {
+                  _M_curValue += *_M_current++;
+                  _M_curValue += *_M_current;
+                  continue;
+                }
+            }
+
           if(*_M_current == *_M_end) 
             {
               _M_state &= ~_S_state_in_bracket;
@@ -354,9 +364,8 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
                 {
                   _M_curValue += *_M_current;
                 }
-            }
-
-          _M_curValue += *(_M_current++);
+            } else 
+                  _M_curValue += *_M_current;
         }
     }
 
