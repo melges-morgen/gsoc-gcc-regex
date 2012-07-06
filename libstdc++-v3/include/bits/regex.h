@@ -769,10 +769,17 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
     public:
       bool matched;
       
+
+      /**
+       * @brief Value-initializes the pair base class subobject and the member matched.
+       */
       constexpr sub_match() : matched() { }
 
       /**
-       * Gets the length of the matching sequence.
+       * @brief Gets the length of the matching sequence.
+       *
+       * @returns (matched ? distance(first, second) : 0)
+       *
        */
       difference_type
       length() const
@@ -2251,15 +2258,19 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
     public:
       /**
-       * @brief Provides a singular iterator, useful for indicating
-       * one-past-the-end of a range.
+       * @brief Constructs an end-of-sequence iterator.
        * @todo Implement this function.
        * @doctodo
        */
       regex_iterator();
       
       /**
-       * Constructs a %regex_iterator...
+       * @brief Initializes begin and end to a and b, respectively,
+       * sets pregex to &re, sets flags to m, then calls
+       * regex_search(begin, end, match, *pregex, flags). If this call
+       * returns false the constructor sets *this to the end-of-sequence
+       * iterator.
+       *
        * @param __a  [IN] The start of a text range to search.
        * @param __b  [IN] One-past-the-end of the text range to search.
        * @param __re [IN] The regular expression to match.
@@ -2272,7 +2283,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 		     = regex_constants::match_default);
 
       /**
-       * Copy constructs a %regex_iterator.
+       * @brief Copy constructs a %regex_iterator.
        * @todo Implement this function.
        * @doctodo
        */
@@ -2287,6 +2298,9 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       
       /**
        * @todo Implement this function.
+       * @returns True if *this and right are both end-of-sequence iterators or if begin == right.begin, end
+       * == right.end, pregex == right.pregex, flags == right.flags, and match[0] == right.match[0],
+       * otherwise false.
        * @doctodo
        */
       bool
@@ -2295,6 +2309,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       /**
        * @todo Implement this function.
        * @doctodo
+       * @retruns !(*this == right)
        */
       bool
       operator!=(const regex_iterator& __rhs);
@@ -2302,11 +2317,13 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       /**
        * @todo Implement this function.
        * @doctodo
+       * @returns match.
        */
       const value_type&
       operator*();
       
       /**
+       * @returns &match
        * @todo Implement this function.
        * @doctodo
        */
@@ -2314,6 +2331,9 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       operator->();
       
       /**
+       * @brief Constructs a local variable start of type
+       * BidirectionalIterator and initializes it with the
+       * value of match[0].second.
        * @todo Implement this function.
        * @doctodo
        */
@@ -2321,6 +2341,8 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       operator++();
       
       /**
+       * @brief Increments iterator.
+       * @returns Iterator value before the increment. 
        * @todo Implement this function.
        * @doctodo
        */

@@ -324,7 +324,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
           return;
         } else if(*_M_current == _M_ctype.widen('\\'))
           {
-            if(*(_M_current + 1) == _M_end)
+            if(*(_M_current + 1) == *_M_end)
               {
                 _M_state &= ~_S_state_in_bracket;
                 _M_state &= ~_S_state_at_start;
