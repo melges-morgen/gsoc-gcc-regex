@@ -59,13 +59,21 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
     class _Scanner: public _Scanner_base
     {
     public:
+      // @brief 
       typedef _InputIterator                                        _IteratorT;
+      
+      // @brief The character container type used in the
+      // implementation of template
       typedef typename std::iterator_traits<_IteratorT>::value_type _CharT;
+      
+      
       typedef std::basic_string<_CharT>                             _StringT;
+      
+      // @brief 
       typedef regex_constants::syntax_option_type                   _FlagT;
       typedef const std::ctype<_CharT>                              _CtypeT;
 
-      // Token types returned from the scanner.
+      // @brief Token types returned from the scanner.
       enum _TokenT
       {
 	_S_token_anychar,
@@ -106,13 +114,17 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
         _M_ctype(std::use_facet<_CtypeT>(__loc)), _M_state(_S_state_at_start)
       { _M_advance(); }
 
-      void
+      // @brief Function determines the Tokens for the current symbol and calls
+      // the appropriate functions for subexpressions and specsymbols
+      void 
       _M_advance();
-
+      
+      // @brief Function return current token stored in scanner
       _TokenT
       _M_token() const
       { return _M_curToken; }
-
+      
+      // @brief Function return current character stored in scanner
       const _StringT&
       _M_value() const
       { return _M_curValue; }
@@ -322,7 +334,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
           return;
         } else if(*_M_current == _M_ctype.widen('\\'))
           {
-            if(*(_M_current + 1) == _M_end)
+            if(*(_M_current + 1) == *_M_end)
               {
                 _M_state &= ~_S_state_in_bracket;
                 _M_state &= ~_S_state_at_start;
@@ -677,7 +689,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
     }
 #endif
 
-  // Builds an NFA from an input iterator interval.
+  // @brief Builds an NFA from an input iterator interval.
   template<typename _InIter, typename _TraitsT>
     class _Compiler
     {
@@ -690,7 +702,8 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
     public:
       _Compiler(const _InIter& __b, const _InIter& __e,
 		_TraitsT& __traits, _FlagT __flags);
-
+      
+      // @brief Function return current state of NFA
       const _Nfa&
       _M_nfa() const
       { return _M_state_store; }

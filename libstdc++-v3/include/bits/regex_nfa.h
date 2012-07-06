@@ -53,11 +53,15 @@ public:
 #endif
 };
 
-// Generic shared pointer to an automaton.  
+/** 
+  * @brief Generic shared pointer to an automaton.  
+  */
 typedef std::shared_ptr<_Automaton> _AutomatonPtr;
 
-// Operation codes that define the type of transitions within the base NFA
-// that represents the regular expression.
+/**
+  * @brief Operation codes that define the type of transitions within the base NFA
+  * that represents the regular expression.
+  */
 enum _Opcode
 {
     _S_opcode_unknown       =   0,
@@ -68,14 +72,18 @@ enum _Opcode
     _S_opcode_accept        = 255
 };
 
-// Provides a generic facade for a templated match_results.
+/**
+  * @brief Provides a generic facade for a templated match_results.
+  */
 struct _Results
 {
   virtual void _M_set_pos(int __i, int __j, const _PatternCursor& __p) = 0;
   virtual void _M_set_matched(int __i, bool __is_matched) = 0;
 };
 
-// Tags current state (for subexpr begin/end).
+/**
+  * @brief Tags current state (for subexpr begin/end).
+  */
 typedef std::function<void (const _PatternCursor&, _Results&)> _Tagger;
 
 template<typename _FwdIterT, typename _TraitsT>
@@ -108,7 +116,10 @@ template<typename _FwdIterT, typename _TraitsT>
     int       _M_index;
     _FwdIterT _M_pos;
   };
-// Indicates if current state matches cursor current.
+
+/** 
+  * @brief Indicates if current state matches cursor current.
+  */
 typedef std::function<bool (const _PatternCursor&)> _Matcher;
 
 struct _BaseToken
@@ -256,12 +267,12 @@ template<typename _TraitsT>
   };
 
 
-// Matches any character
+// Function matches any character (always return true)
 inline bool
 _AnyMatcher(const _PatternCursor&)
 { return true; }
 
-// Matches a single character
+// Function matches a single character
 template<typename _InIterT, typename _TraitsT>
   struct _CharMatcher
   {
@@ -380,14 +391,14 @@ template<typename _InIterT, typename _TraitsT>
   // The special case in which a state identifier is not an index.
   static const _StateIdT _S_invalid_state_id  = -1;
 
-
-  // An individual state in an NFA
-  //
-  // In this case a "state" is an entry in the NFA definition coupled with its
-  // outgoing transition(s).  All states have a single outgoing transition,
-  // except for accepting states (which have no outgoing transitions) and alt
-  // states, which have two outgoing transitions.
-  //
+  /**
+    * @brief An individual state in an NFA
+    *
+    * In this case a "state" is an entry in the NFA definition coupled with its
+    * outgoing transition(s).  All states have a single outgoing transition,
+    * except for accepting states (which have no outgoing transitions) and alt
+    * states, which have two outgoing transitions.
+    */
   struct _State
   {
     typedef int  _OpcodeT;
@@ -427,22 +438,25 @@ template<typename _InIterT, typename _TraitsT>
   };
 
   
-  // The Grep Matcher works on sets of states.  Here are sets of states.
+  /** 
+    * @brief The Grep Matcher works on sets of states.  Here are sets of states.
+    */
   typedef std::set<_StateIdT> _StateSet;
 
- // A collection of all states making up an NFA
-  //
-  // An NFA is a 4-tuple M = (K, S, s, F), where
-  //    K is a finite set of states,
-  //    S is the alphabet of the NFA,
-  //    s is the initial state,
-  //    F is a set of final (accepting) states.
-  //
-  // This NFA class is templated on S, a type that will hold values of the
-  // underlying alphabet (without regard to semantics of that alphabet).  The
-  // other elements of the tuple are generated during construction of the NFA
-  // and are available through accessor member functions.
-  //
+  /** 
+    * @brief A collection of all states making up an NFA
+    *
+    * An NFA is a 4-tuple M = (K, S, s, F), where
+    *    K is a finite set of states,
+    *    S is the alphabet of the NFA,
+    *    s is the initial state,
+    *    F is a set of final (accepting) states.
+    *
+    * This NFA class is templated on S, a type that will hold values of the
+    * underlying alphabet (without regard to semantics of that alphabet).  The
+    * other elements of the tuple are generated during construction of the NFA
+    * and are available through accessor member functions.
+    */
   class _Nfa
   : public _Automaton, public std::vector<_State>
   {
@@ -523,55 +537,81 @@ template<typename _InIterT, typename _TraitsT>
     _SizeT     _M_subexpr_count;
   };
 
-  // Describes a sequence of one or more %_State, its current start and end(s).
-  //
-  // This structure contains fragments of an NFA during construction.
+  /**
+    * @brief Describes a sequence of one or more %_State, its current start and end(s).
+    *
+    * This structure contains fragments of an NFA during construction.
+    */
   class _StateSeq
   {
   public:
-    // Constructs a single-node sequence
+    
+    /**
+      * @brief Constructs a single-node sequence
+      */
     _StateSeq(_Nfa& __ss, _StateIdT __s, _StateIdT __e = _S_invalid_state_id)
     : _M_nfa(__ss), _M_start(__s), _M_end1(__s), _M_end2(__e)
     { }
-    // Constructs a split sequence from two other sequencces
+
+    /**
+      * @brief Constructs a split sequence from two other sequencces
+      */
     _StateSeq(const _StateSeq& __e1, const _StateSeq& __e2)
     : _M_nfa(__e1._M_nfa),
       _M_start(_M_nfa._M_insert_alt(__e1._M_start, __e2._M_start)),
       _M_end1(__e1._M_end1), _M_end2(__e2._M_end1)
     { }
 
-    // Constructs a split sequence from a single sequence
+    /** 
+      * @brief Constructs a split sequence from a single sequence
+      */
     _StateSeq(const _StateSeq& __e, _StateIdT __id)
     : _M_nfa(__e._M_nfa),
       _M_start(_M_nfa._M_insert_alt(__id, __e._M_start)),
       _M_end1(__id), _M_end2(__e._M_end1)
     { }
 
-    // Constructs a copy of a %_StateSeq
+    /** 
+      * Constructs a copy of a %_StateSeq
+      */
     _StateSeq(const _StateSeq& __rhs)
     : _M_nfa(__rhs._M_nfa), _M_start(__rhs._M_start),
       _M_end1(__rhs._M_end1), _M_end2(__rhs._M_end2)
     { }
 
-
+    /**
+      * 
+      */
     _StateSeq& operator=(const _StateSeq& __rhs);
-
+    
+    /**
+      * @brief return state of front sequence.
+      */
     _StateIdT
     _M_front() const
     { return _M_start; }
 
-    // Extends a sequence by one.
+    /** 
+      * @brief Extends a sequence by one.
+      */
     void
     _M_push_back(_StateIdT __id);
 
-    // Extends and maybe joins a sequence.
+    /**
+      * @brief Extends and maybe joins a sequence.
+      */
     void
     _M_append(_StateIdT __id);
-
+    
+    /**
+      * @brief Extends and maybe joins a sequence.
+      */
     void
     _M_append(_StateSeq& __rhs);
 
-    // Clones an entire sequence.
+    /**
+      * @brief Clones an entire sequence.
+      */
     _StateIdT
     _M_clone();
 
