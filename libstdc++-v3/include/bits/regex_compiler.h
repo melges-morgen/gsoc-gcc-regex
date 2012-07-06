@@ -301,6 +301,8 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
     _Scanner<_InputIterator>::
     _M_scan_in_bracket()
     {
+      _M_curToken = _S_token_bracket_end;
+
       if(*_M_current == _M_ctype.widen('^'))
         {
           if(*(_M_current + 1) == _M_ctype.widen(']') || 
@@ -371,6 +373,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
             }
 
         }
+      _M_advance();
     }
 
   template<typename _InputIterator>
@@ -1018,19 +1021,36 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 	{
           _M_TokenListT __ml;
           
+          char_type esc = ctype.widen('\\'); 
+          char_type neg = ctype.widen('^'); 
+          char_type dash = ctype.widen('-'); 
+
           bool negation = false;
+          bool escaped = false;
+
           for (int i = 0; i< _M_cur_value.length(); i++)    
             {
-              if (_M_cur_value[i] == ctype.widen('^')) 
+              if (!escaped && _M_cur_value[i] == esc)
+                {
+                  escaped = true;
+                  continue;
+                }
+              if (escaped)
+                {
+                  escaped = false;
+                }
+              if (_M_cur_value[i] == neg) 
                 {
                   negation = true;
-                } else if (_M_cur_value[i] == ctype.widen('-')) 
-                  {
-                    __ml.push_back(_TokFactory(_M_cur_value[i-1], _M_cur_value[++i], negation));
-                  } else if (_M_cur_value[i + 1] != ctype.widen('-'))
-                    {
-                      __ml.push_back(_TokFactory(_M_cur_value[i], negation));
-                    }
+                }
+              else if (_M_cur_value[i] == dash) 
+                {
+                  __ml.push_back(_TokFactory(_M_cur_value[i-1], _M_cur_value[++i], negation));
+                }
+              else if (_M_cur_value[i + 1] != dash)
+                {
+                  __ml.push_back(_TokFactory(_M_cur_value[i], negation));
+                }
             }
 
           _IMatcherT __matcher(__ml, _M_traits);
