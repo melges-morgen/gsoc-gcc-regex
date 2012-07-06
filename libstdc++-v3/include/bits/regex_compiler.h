@@ -45,35 +45,36 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
     virtual ~_Scanner_base() { };
   };
 
-  //
-  // @brief Scans an input range for regex tokens.
-  //
-  // The %_Scanner class interprets the regular expression pattern in the input
-  // range passed to its constructor as a sequence of parse tokens passed to
-  // the regular expression compiler.  The sequence of tokens provided depends
-  // on the flag settings passed to the constructor:  different regular
-  // expression grammars will interpret the same input pattern in
-  // syntactically different ways.
-  //
+  /**
+    * @brief Scans an input range for regex tokens.
+    *
+    * The %_Scanner class interprets the regular expression pattern in the input
+    * range passed to its constructor as a sequence of parse tokens passed to
+    * the regular expression compiler.  The sequence of tokens provided depends
+    * on the flag settings passed to the constructor:  different regular
+    * expression grammars will interpret the same input pattern in
+    * syntactically different ways.
+    */
   template<typename _InputIterator>
     class _Scanner: public _Scanner_base
     {
     public:
-      // @brief 
       typedef _InputIterator                                        _IteratorT;
       
-      // @brief The character container type used in the
-      // implementation of template
+      /**
+        * @brief The character container type used in the
+        * implementation of template
+        */
       typedef typename std::iterator_traits<_IteratorT>::value_type _CharT;
-      
       
       typedef std::basic_string<_CharT>                             _StringT;
       
-      // @brief 
       typedef regex_constants::syntax_option_type                   _FlagT;
       typedef const std::ctype<_CharT>                              _CtypeT;
 
-      // @brief Token types returned from the scanner.
+      /**
+        * @brief Token types returned from the scanner.
+        */
       enum _TokenT
       {
 	_S_token_anychar,
@@ -114,17 +115,23 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
         _M_ctype(std::use_facet<_CtypeT>(__loc)), _M_state(_S_state_at_start)
       { _M_advance(); }
 
-      // @brief Function determines the Tokens for the current symbol and calls
-      // the appropriate functions for subexpressions and specsymbols
+      /**
+        * @brief Function determines the Tokens for the current symbol and calls
+        * the appropriate functions for subexpressions and specsymbols.
+        */
       void 
       _M_advance();
       
-      // @brief Function return current token stored in scanner
+      /** 
+        * @brief Function return current token stored in scanner
+        */
       _TokenT
       _M_token() const
       { return _M_curToken; }
       
-      // @brief Function return current character stored in scanner
+      /** 
+        * @brief Function return current character stored in scanner
+        */
       const _StringT&
       _M_value() const
       { return _M_curValue; }
@@ -689,7 +696,10 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
     }
 #endif
 
-  // @brief Builds an NFA from an input iterator interval.
+  /**
+    * @brief Builds an NFA from an input iterator interval.
+    * @todo
+    */
   template<typename _InIter, typename _TraitsT>
     class _Compiler
     {
@@ -703,7 +713,9 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       _Compiler(const _InIter& __b, const _InIter& __e,
 		_TraitsT& __traits, _FlagT __flags);
       
-      // @brief Function return current state of NFA
+      /**
+        * @brief Function return current state of NFA
+        */
       const _Nfa&
       _M_nfa() const
       { return _M_state_store; }
@@ -715,7 +727,9 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       typedef _RangeMatcher<_InIter, _TraitsT>               _RMatcherT;
       typedef _IntervalMatcher<_InIter, _TraitsT>            _IMatcherT;
 
-      // accepts a specific token or returns false.
+      /**
+        * @brief Accepts a specific token or returns false.
+        */
       bool
       _M_match_token(_TokenT __token);
 

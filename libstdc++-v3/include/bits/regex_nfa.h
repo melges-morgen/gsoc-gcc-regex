@@ -267,12 +267,16 @@ template<typename _TraitsT>
   };
 
 
-// Function matches any character (always return true)
+/** 
+  * @brief Function matches any character (always return true)
+  */
 inline bool
 _AnyMatcher(const _PatternCursor&)
 { return true; }
 
-// Function matches a single character
+/**
+  @brief Function matches a single character
+  */
 template<typename _InIterT, typename _TraitsT>
   struct _CharMatcher
   {
@@ -295,7 +299,9 @@ template<typename _InIterT, typename _TraitsT>
     char_type       _M_c;
   };
 
-// Matches a character range (bracket expression)
+/**
+  * @brief Matches a character range (bracket expression)
+  */
 template<typename _InIterT, typename _TraitsT>
   struct _RangeMatcher
   {
@@ -339,7 +345,9 @@ template<typename _InIterT, typename _TraitsT>
     bool            _M_is_non_matching;
   };
 
-// Matches a character interval ([a-z] bracket expression)
+/**
+  * @brief Matches a character interval ([a-z] bracket expression).
+  */
 template<typename _InIterT, typename _TraitsT>
   struct _IntervalMatcher
   {
@@ -385,10 +393,14 @@ template<typename _InIterT, typename _TraitsT>
       }
     };
 
-  // Identifies a state in the NFA.
+  /**
+    * @brief Identifies a state in the NFA.
+    */
   typedef int _StateIdT;
 
-  // The special case in which a state identifier is not an index.
+  /**
+    * @brief The special case in which a state identifier is not an index.
+    */
   static const _StateIdT _S_invalid_state_id  = -1;
 
   /**
@@ -580,7 +592,7 @@ template<typename _InIterT, typename _TraitsT>
     { }
 
     /**
-      * 
+      * @doctodo
       */
     _StateSeq& operator=(const _StateSeq& __rhs);
     
