@@ -356,6 +356,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
                 {
                   _M_state &= ~_S_state_in_bracket;
                   _M_curValue += *_M_current;
+                  return;
                 }
               else if(*(_M_current - 1) >= *(_M_current + 1))
                 {

@@ -1,7 +1,7 @@
 // { dg-options "-std=c++0x" }
 
 //
-// 2010-06-16  Stephen M. Webb <stephen.webb@bregmasoft.ca>
+// 2010-06-11  Stephen M. Webb <stephen.webb@bregmasoft.ca>
 //
 // Copyright (C) 2010 Free Software Foundation, Inc.
 //
@@ -21,6 +21,7 @@
 // <http://www.gnu.org/licenses/>.
 
 // 28.11.2 regex_match
+// Tests BRE against a std::string target.
 
 #include <regex>
 #include <testsuite_hooks.h>
@@ -30,11 +31,12 @@ test01()
 {
   bool test __attribute__((unused)) = true;
 
-	std::regex  re("[a-c]", std::regex::basic);
-	std::string target_accept("b");
-	std::string target_fail("d");
-	std::smatch m;
+	std::regex re("[ac-]", std::regex::basic);
+	std::string target_accept("a");
+	std::string target_reject("f");
+        std::smatch m;
 
+	VERIFY( !std::regex_match(target_reject, m, re) );
 	VERIFY( std::regex_match(target_accept, m, re) );
 
 	VERIFY( m.size()  == re.mark_count()+1 );
@@ -48,8 +50,9 @@ test01()
 	VERIFY( m[0].first == target_accept.begin() );
 	VERIFY( m[0].second == target_accept.end() );
 	VERIFY( m[0].matched == true );
-
-	VERIFY( !std::regex_match(target_fail, m, re) );
+	VERIFY( m[1].first == target_accept.begin() );
+	VERIFY( m[1].second == target_accept.begin()+1 );
+	VERIFY( m[1].matched == true );
 }
 
 
@@ -59,4 +62,3 @@ main()
   test01();
   return 0;
 }
-
