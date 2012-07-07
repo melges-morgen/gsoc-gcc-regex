@@ -57,7 +57,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 			  match_results<_FwdIterT, _Alloc>& __m);
 
       /**
-       * @brief Sets _M_results.at(i).first() _M_results.at(i).first() or to __pc.
+       * @brief Sets _M_results.at(i).first() or _M_results.at(i).second() to __pc.
        * @param __i indicates position in _M_results.
        * @param __j indicates positin in _M_results.at(i) (first or second).
        */
