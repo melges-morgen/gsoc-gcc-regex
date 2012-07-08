@@ -457,6 +457,7 @@ template<typename _InIterT, typename _TraitsT>
         char_type __mc = _M_traits.translate(__c._M_current());
 
         bool _ret_code = false;
+        bool _neg_only = true;
         for (tokIt tok = _M_l.begin();
                 tok != _M_l.end(); tok++)
         {
@@ -466,14 +467,18 @@ template<typename _InIterT, typename _TraitsT>
             case _TokenFactory<_TraitsT>::NegChar:
               if (!((*tok)(__mc)))
                 return false;
-              else break;
+              else
+                continue;
 
             default:
               if ((*tok)(__mc))
+              {
                 _ret_code = true;
+                _neg_only = false;
+              }
           }
         }
-        return _ret_code;
+        return _neg_only ? true: _ret_code;
       }
     };
 
