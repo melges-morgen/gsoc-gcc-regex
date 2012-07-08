@@ -698,7 +698,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
   /**
     * @brief Builds an NFA from an input iterator interval.
-    * @todo
+    * @doctodo
     */
   template<typename _InIter, typename _TraitsT>
     class _Compiler
