@@ -478,7 +478,7 @@ template<typename _InIterT, typename _TraitsT>
               }
           }
         }
-        return _neg_only ? true: _ret_code;
+        return _neg_only ? true && _ret_code: _ret_code;
       }
     };
 
