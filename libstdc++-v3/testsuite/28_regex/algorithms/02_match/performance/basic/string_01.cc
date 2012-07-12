@@ -47,6 +47,8 @@ int main () {
   printf ("time of compilation = %d\n", t);
 
   t = -time(NULL);
+
+
   // Checks match performance.
   for (int i = 0; i < 1000000; i++)
   {
