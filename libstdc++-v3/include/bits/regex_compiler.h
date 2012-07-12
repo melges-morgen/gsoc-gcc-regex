@@ -72,8 +72,6 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       typedef regex_constants::syntax_option_type                   _FlagT;
       typedef const std::ctype<_CharT>                              _CtypeT;
 
-      typedef std::set<_StringT>                                    _SetT;
-
       /**
         * @brief Token types returned from the scanner.
         */
@@ -110,6 +108,33 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 	_S_token_unknown
       };
 
+
+      /**
+        * @brief Char classes acceptable by scanner.
+        */
+      enum _CharClassT
+      {
+        _S_class_alpha,
+        _S_class_ascii,
+        _S_class_blank,
+        _S_class_cntrl,
+        _S_class_digit,
+        _S_class_graph,
+        _S_class_lower,
+        _S_class_print,
+        _S_class_punct,
+        _S_class_space,
+        _S_class_upper,
+        _S_class_word,
+        _S_class_alnum,
+        _S_class_xdigit,
+        _S_class_unknown
+      };
+
+      typedef std::map<_StringT, _CharClassT>                       _MapT;
+      typedef std::pair<std::string, _CharClassT>                   _ClassPairT;
+
+
     public:
       _Scanner(_IteratorT __begin, _IteratorT __end, _FlagT __flags,
 	       std::locale __loc)
@@ -136,36 +161,37 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
         _M_equals = _M_ctype.widen('=');
 
         // init of names of char classes.
-        std::vector<std::string> _names;
-        _names.push_back("alnum");
-        _names.push_back("alpha");
-        _names.push_back("ascii");
-        _names.push_back("blank");
-        _names.push_back("digit");
-        _names.push_back("graph");
-        _names.push_back("lower");
-        _names.push_back("print");
-        _names.push_back("punct");
-        _names.push_back("space");
-        _names.push_back("upper");
-        _names.push_back("word");
-        _names.push_back("xdigit");
+        std::vector<_ClassPairT > _names;
+        _names.push_back(_ClassPairT("alnum", _S_class_alnum));
+        _names.push_back(_ClassPairT("alpha", _S_class_alpha));
+        _names.push_back(_ClassPairT("ascii", _S_class_ascii));
+        _names.push_back(_ClassPairT("blank", _S_class_blank));
+        _names.push_back(_ClassPairT("digit", _S_class_digit));
+        _names.push_back(_ClassPairT("graph", _S_class_graph));
+        _names.push_back(_ClassPairT("lower", _S_class_lower));
+        _names.push_back(_ClassPairT("print", _S_class_print));
+        _names.push_back(_ClassPairT("punct", _S_class_punct));
+        _names.push_back(_ClassPairT("space", _S_class_space));
+        _names.push_back(_ClassPairT("upper", _S_class_upper));
+        _names.push_back(_ClassPairT("word", _S_class_word));
+        _names.push_back(_ClassPairT("xdigit", _S_class_xdigit));
 
-        for (std::vector<string>::iterator _str = _names.begin();
+        for (typename std::vector<_ClassPairT>::iterator _str = _names.begin();
             _str != _names.end();
             _str++)
           {
              _StringT _current;
-             for (std::string::iterator _ch = _str->begin();
-                 _ch != _str->end();
+             for (std::string::iterator _ch = _str->first.begin();
+                 _ch != _str->first.end();
                  _ch++)
                _current += _M_ctype.widen(*_ch);
 
-             _M_classnames.insert(_current);
+             _M_classnames[_current] = _str->second();
           }
 
        
-        _M_advance(); }
+        _M_advance();
+      }
 
       /**
         * @brief Function determines the Tokens for the current symbol and calls
@@ -180,7 +206,10 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       _TokenT
       _M_token() const
       { return _M_curToken; }
-      
+
+      _CharClassT
+      _M_charclass (const _StringT& __classname) const; 
+
       /** 
         * @brief Function return current character stored in scanner
         */
@@ -233,7 +262,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       _CharT      _M_colon;
       _CharT      _M_equals;
       // char classes names.
-      _SetT       _M_classnames;
+      _MapT       _M_classnames;
       _IteratorT  _M_current;
       _IteratorT  _M_end;
       _FlagT      _M_flags;
@@ -242,6 +271,15 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       _StringT    _M_curValue;
       _StateT     _M_state;
     };
+
+  template<typename _InputIterator>
+    typename _Scanner<_InputIterator>::_CharClassT
+    _Scanner<_InputIterator>::
+    _M_charclass (const _StringT& __classname) const
+    {
+      typename _MapT::iterator _class = _M_classnames.find();
+      return _class == _M_classnames.end()? _S_class_unknown: _class->second();
+    }
 
   template<typename _InputIterator>
     void
