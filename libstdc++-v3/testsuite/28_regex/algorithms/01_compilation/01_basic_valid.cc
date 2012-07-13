@@ -22,7 +22,6 @@ simple_string_test()
 void 
 bracket_expressions_test()
 {
-  std::regex re0("[]", std::regex::basic);
   std::regex re1("[a-z]", std::regex::basic);
   std::regex re2("[az-]", std::regex::basic);
   std::regex re3("[-za]", std::regex::basic);
