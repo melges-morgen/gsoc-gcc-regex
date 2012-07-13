@@ -44,7 +44,9 @@ namespace __regex
 {
 _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
-  // A _Results facade specialized for wrapping a templated match_results.
+  /*
+   *  @brief A _Results facade specialized for wrapping a templated match_results.
+  **/
   template<typename _FwdIterT, typename _Alloc>
     class _SpecializedResults
     : public _Results
@@ -54,9 +56,19 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 			  const _SpecializedCursor<_FwdIterT>& __cursor,
 			  match_results<_FwdIterT, _Alloc>& __m);
 
+      /**
+       * @brief Sets _M_results.at(i).first() or _M_results.at(i).second() to __pc.
+       * @param __i indicates position in _M_results.
+       * @param __j indicates positin in _M_results.at(i) (first or second).
+       */
       void
       _M_set_pos(int __i, int __j, const _PatternCursor& __pc);
 
+      /**
+       * @brief Marks at _M_results.at(i) as __is_matched.
+       * @param __i indicats position in _M_results.
+       * @param __is_matched indicates state (matched or not).
+       */
       void
       _M_set_matched(int __i, bool __is_matched)
       { _M_results.at(__i).matched = __is_matched; }
@@ -95,15 +107,22 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 	_M_results.at(__i).second = __c._M_pos()+1;
     }
 
-  // A stack of states used in evaluating the NFA.
+ /**
+  * @brief A stack of states used in evaluating the NFA.
+  */
   typedef std::stack<_StateIdT, std::vector<_StateIdT> > _StateStack;
 
-  // Executes a regular expression NFA/DFA over a range using a variant of
-  // the parallel execution algorithm featured in the grep utility, modified
-  // to use Laurikari tags.
+ /** 
+  * @brief Executes a regular expression NFA/DFA over a range using a variant of
+  * the parallel execution algorithm featured in the grep utility, modified
+  * to use Laurikari tags.
+  */
   class _Grep_matcher
   {
   public:
+ /**
+  * @doctodo
+  */
     _Grep_matcher(_PatternCursor&                   __p,
 		  _Results&                         __r,
 		  const _AutomatonPtr&              __automaton,

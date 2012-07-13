@@ -34,7 +34,10 @@ namespace __regex
 {
 _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
-// Base class for, um, automata.  Could be an NFA or a DFA.  Your choice.
+/**
+*@brief Base class for automata.  Could be an NFA or a DFA.  Your choice.
+*/
+
 class _Automaton
 {
 public:
@@ -86,6 +89,9 @@ struct _Results
   */
 typedef std::function<void (const _PatternCursor&, _Results&)> _Tagger;
 
+/**
+ * @doctodo
+ */
 template<typename _FwdIterT, typename _TraitsT>
   struct _StartTagger
   {
@@ -122,9 +128,16 @@ template<typename _FwdIterT, typename _TraitsT>
   */
 typedef std::function<bool (const _PatternCursor&)> _Matcher;
 
+
+/**
+ * @brief Base class for tokens for IntervalMatcher.
+ */
 struct _BaseToken
 {
   public:
+    /**
+     * @brief Types of tokens for _IntervalMatcher.
+     */
     enum _Type
     {
       NegInterval,
@@ -133,11 +146,17 @@ struct _BaseToken
       Char
     };
 
+    /**
+     * @brief constructs _BaseToken
+     * @param __t type of token.
+     * @param __negation indicates that token is negation.
+     */
     _BaseToken(_Type __t, bool __negation )
       : _type(__t), _M_negation(__negation)
     { }
 
-    virtual ~_BaseToken()
+    virtual
+    ~_BaseToken()
     { }
 
     virtual
@@ -150,21 +169,36 @@ struct _BaseToken
     const bool _M_negation;
 };
 
+/**
+ * @brief [a-z] expression token.
+ */
 template<typename _TraitsT>
   struct _IntervalToken: public _BaseToken
   {
     typedef typename _TraitsT::char_type char_type;
     typedef std::pair<char_type, char_type> _M_PairT;
 
+    /**
+     * @brief Constructs  [a-z] expression token or its negation
+     * accroding to negation.
+     * @param __cp start and end symbols of interval.
+     * @param __negation indicates is token a negation.`:w
+     */
     explicit
     _IntervalToken(const _M_PairT& __cp, const bool __negation)
        : _BaseToken(__negation ? NegInterval : Interval, __negation), _M_c(__cp)
     { }
 
+    /**
+     * @brief Copy constructor. Needed in TokenFactory.
+     */
     _IntervalToken(const _IntervalToken<_TraitsT>& __i)
       : _BaseToken(__i._M_type(), __i._M_negation), _M_c(__i._M_c) 
     { }
 
+    /**
+     * @brief Indicates whether __c in the interval represented by token.
+     */
     bool
     operator()(const char_type __c) const
     {
@@ -175,20 +209,34 @@ template<typename _TraitsT>
     const _M_PairT _M_c;
   };
 
+/**
+ * @brief [a] expression token.
+ */
 template<typename _TraitsT>
   struct _CharToken: public _BaseToken
   {
     typedef typename _TraitsT::char_type char_type;
-
+    /**
+     * @brief Constructs [a] expression token or its negation
+     * accroding to negation.
+     * @param __c .
+     * @param __negation indicates is token a negation.
+     */
     explicit
     _CharToken(const char_type __c, const bool __negation)
        : _BaseToken(__negation ? NegChar : Char, __negation), _M_c(__c)
     { }
 
+    /**
+     * @brief Copy constructor. Needed in TokenFactory.
+     */
     _CharToken(const _CharToken<_TraitsT>& __c)
       : _BaseToken(__c._M_type(), __c._M_negation), _M_c(__c._M_c) 
     { }
 
+    /**
+     * @brief Indicates whether __c in the interval represented by token.
+     */
     bool
     operator()(const char_type __c) const
     {
@@ -198,33 +246,51 @@ template<typename _TraitsT>
     const char_type _M_c;
   };
 
+/**
+ * @brief Wrapper class for tokens for IntervalMatcher.
+ */
 template<typename _TraitsT>
   struct _TokenFactory: public _BaseToken
   {
     typedef typename _TraitsT::char_type char_type;
     typedef std::pair<char_type, char_type> _M_PairT;
 
+    /**
+     * @brief Wrapper for _CharToken.
+     */
     _TokenFactory(const _CharToken<_TraitsT>& __c)
       : _BaseToken(__c._M_type(), __c._M_negation),
         _cTok(new _CharToken<_TraitsT>(__c))
     { }
 
+    /**
+     * @brief Wrapper for _CharToken.
+     */
     _TokenFactory(const char_type __c, bool __negation)
       : _BaseToken(__negation? NegChar:Char, __negation),
         _cTok(new _CharToken<_TraitsT>(__c, __negation))
     { }
 
+    /**
+     * @brief Wrapper for _IntervalToken.
+     */
     _TokenFactory(const _IntervalToken<_TraitsT>& __i)
       : _BaseToken(__i._M_type(), __i._M_negation),
         _cTok(new _IntervalToken<_TraitsT>(__i))
     { }
 
+    /**
+     * @brief Wrapper for _IntervalToken.
+     */
     _TokenFactory(const char_type __cl, const char_type __cr,
         bool __negation)
       : _BaseToken(__negation ? NegInterval:Interval, __negation),
         _iTok(new _IntervalToken<_TraitsT>(_M_PairT(__cl, __cr), __negation))
     { }
 
+    /**
+     * @brief Indicates whether __c in the interval represented by token.
+     */
     bool
     operator()(const char_type __c) const
     {
@@ -244,6 +310,10 @@ template<typename _TraitsT>
       }
     }
 
+    /**
+     * @brief type of token being wrapped.
+     * @returns type of stored token.
+     */
     _Type _M_type () const
     {
       switch (_type)
@@ -262,8 +332,6 @@ template<typename _TraitsT>
 
     const std::shared_ptr<_CharToken<_TraitsT> > _cTok;
     const std::shared_ptr<_IntervalToken<_TraitsT> > _iTok;
-
-
   };
 
 
@@ -282,11 +350,19 @@ template<typename _InIterT, typename _TraitsT>
   {
     typedef typename _TraitsT::char_type char_type;
 
+    /**
+     * @brief Constructs _CharMatcher.
+     * @param __c char that should be stored in matcher.
+     * @param __t describes aspects of a regular expression.
+     */
     explicit
     _CharMatcher(char_type __c, const _TraitsT& __t = _TraitsT())
     : _M_traits(__t), _M_c(_M_traits.translate(__c))
     { }
 
+    /**
+     * @brief Indicates whether __pc is acceptable by matcher.
+     */
     bool
     operator()(const _PatternCursor& __pc) const
     {
@@ -308,6 +384,11 @@ template<typename _InIterT, typename _TraitsT>
     typedef typename _TraitsT::char_type _CharT;
     typedef std::basic_string<_CharT>    _StringT;
 
+    /**
+     * @brief Constructs _RangeMatcher.
+     * @param __c char that should be stored in matcher.
+     * @param __t describes aspects of a regular expression.
+     */
     explicit
     _RangeMatcher(bool __is_non_matching, const _TraitsT& __t = _TraitsT())
     : _M_traits(__t), _M_is_non_matching(__is_non_matching)
@@ -321,6 +402,9 @@ template<typename _InIterT, typename _TraitsT>
       return true;
     }
 
+    /**
+     * @brief Adds char to range expression.
+     */
     void
     _M_add_char(_CharT __c)
     { }
@@ -373,6 +457,7 @@ template<typename _InIterT, typename _TraitsT>
         char_type __mc = _M_traits.translate(__c._M_current());
 
         bool _ret_code = false;
+        bool _neg_only = true;
         for (tokIt tok = _M_l.begin();
                 tok != _M_l.end(); tok++)
         {
@@ -382,14 +467,18 @@ template<typename _InIterT, typename _TraitsT>
             case _TokenFactory<_TraitsT>::NegChar:
               if (!((*tok)(__mc)))
                 return false;
-              else break;
+              else
+                continue;
 
             default:
               if ((*tok)(__mc))
+              {
                 _ret_code = true;
+                _neg_only = false;
+              }
           }
         }
-        return _ret_code;
+        return _neg_only ? true && _ret_code: _ret_code;
       }
     };
 
