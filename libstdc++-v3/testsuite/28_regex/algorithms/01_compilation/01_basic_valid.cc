@@ -1,3 +1,5 @@
+// { dg-options "-std=c++0x" }
+
 #include <regex>
 #include <testsuite_hooks.h>
 
@@ -5,6 +7,8 @@
 void 
 simple_string_test()
 {
+  bool test __attribute__((unused)) = true; 
+  
   std::regex re0("Simple string", std::regex::basic);
   std::regex re1("String[a-z] string", std::regex::basic);
   std::regex re2("String[a-zA-Z-]", std::regex::basic);
@@ -22,6 +26,8 @@ simple_string_test()
 void 
 bracket_expressions_test()
 {
+  bool test __attribute__((unused)) = true; 
+
   std::regex re1("[a-z]", std::regex::basic);
   std::regex re2("[az-]", std::regex::basic);
   std::regex re3("[-za]", std::regex::basic);
@@ -38,6 +44,8 @@ bracket_expressions_test()
 void
 interval_expressions_test() 
 {
+  bool test __attribute__((unused)) = true; 
+  
   std::regex re0("a\\{,4\\}", std::regex::basic);
   std::regex re1("a\\{2,4\\}", std::regex::basic);
   std::regex re2("a\\{2,\\}", std::regex::basic);
