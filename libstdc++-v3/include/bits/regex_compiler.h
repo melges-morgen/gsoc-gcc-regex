@@ -28,6 +28,8 @@
  *  Do not attempt to use it directly. @headername{regex}
  */
 
+#include <map>
+
 namespace std _GLIBCXX_VISIBILITY(default)
 {
 namespace __regex
@@ -138,7 +140,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
     public:
       _Scanner(_IteratorT __begin, _IteratorT __end, _FlagT __flags,
 	       std::locale __loc)
-      : _M_current(__begin) , _M_end(__end) , _M_flags(__flags),
+      : _M_begin(__begin), _M_current(__begin) , _M_end(__end) , _M_flags(__flags),
         _M_ctype(std::use_facet<_CtypeT>(__loc)), _M_state(_S_state_at_start)
       { 
         _M_dot = _M_ctype.widen('.');
@@ -152,7 +154,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
         _M_sub_end = _M_ctype.widen(')');
         _M_brace_beg = _M_ctype.widen('{');
         _M_brace_end = _M_ctype.widen('}');
-        _M_comma = _M_ctype.widen('{');
+        _M_comma = _M_ctype.widen(',');
         _M_carret = _M_ctype.widen('^');
         _M_dash = _M_ctype.widen('-');
         _M_eof = _M_ctype.widen('x');
@@ -186,7 +188,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
                  _ch++)
                _current += _M_ctype.widen(*_ch);
 
-             _M_classnames[_current] = _str->second();
+             _M_classnames[_current] = _str->second;
           }
 
        
@@ -201,17 +203,23 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       _M_advance();
       
       /** 
-        * @brief Function return current token stored in scanner
+        * @brief _M_curToken getter.
+        * @return current token stored in scanner
         */
       _TokenT
       _M_token() const
       { return _M_curToken; }
 
+      /**
+        * @brief checks if __classname is valid char class name.
+        * @return correspoding char class or _S_class_unknown.
+        */
       _CharClassT
       _M_charclass (const _StringT& __classname) const; 
 
       /** 
-        * @brief Function return current character stored in scanner
+        * @brief _M_curValue getter.
+        * @return current character stored in scanner
         */
       const _StringT&
       _M_value() const
@@ -265,6 +273,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       _MapT       _M_classnames;
       _IteratorT  _M_current;
       _IteratorT  _M_end;
+      _IteratorT  _M_begin;
       _FlagT      _M_flags;
       _CtypeT&    _M_ctype;
       _TokenT     _M_curToken;
@@ -278,7 +287,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
     _M_charclass (const _StringT& __classname) const
     {
       typename _MapT::iterator _class = _M_classnames.find();
-      return _class == _M_classnames.end()? _S_class_unknown: _class->second();
+      return _class == _M_classnames.end()? _S_class_unknown: _class->second;
     }
 
   template<typename _InputIterator>
@@ -327,12 +336,22 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 	}
       else if (__c == _M_star)
 	{
+          if (_M_current == _M_begin)
+            {
+              __throw_regex_error(regex_constants::error_badrepeat);
+              return;
+            }
 	  _M_curToken = _S_token_closure0;
 	  ++_M_current;
 	  return;
 	}
       else if (__c == _M_plus)
 	{
+          if (_M_current == _M_begin)
+            {
+              __throw_regex_error(regex_constants::error_badrepeat);
+              return;
+            }
 	  _M_curToken = _S_token_closure1;
 	  ++_M_current;
 	  return;
@@ -344,13 +363,6 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 	  return;
 
         }
-      else if (__c == _M_bracket_beg)
-	{
-	  _M_curToken = _S_token_bracket_begin;
-	  _M_state |= (_S_state_in_bracket | _S_state_at_start);
-	  ++_M_current;
-	  return;
-	}
       else if (__c == _M_esc)
 	{
 	  _M_eat_escape();
@@ -360,12 +372,22 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 	{
 	  if (__c == _M_sub_beg)
 	    {
+              if ((_M_current + 1) == _M_end)
+                {
+                  __throw_regex_error(regex_constants::error_stack);
+	          return;
+                }
 	      _M_curToken = _S_token_subexpr_begin;
 	      ++_M_current;
 	      return;
 	    }
 	  else if (__c == _M_sub_end)
 	    {
+              if (_M_current == _M_begin)
+                {
+                  __throw_regex_error(regex_constants::error_stack);
+	          return;
+                }
 	      _M_curToken = _S_token_subexpr_end;
 	      ++_M_current;
 	      return;
@@ -374,6 +396,18 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 	    {
 	      _M_curToken = _S_token_interval_begin;
 	      _M_state |= _S_state_in_brace;
+	      ++_M_current;
+	      return;
+	    }
+          else if (__c == _M_bracket_beg)
+	    {
+              if (_M_current == _M_begin)
+                {
+                  __throw_regex_error(regex_constants::error_brack);
+                  return;
+                }
+	      _M_curToken = _S_token_bracket_begin;
+	      _M_state |= (_S_state_in_bracket | _S_state_at_start);
 	      ++_M_current;
 	      return;
 	    }
@@ -434,7 +468,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       _M_curToken = _S_token_bracket_end;
 
       if(*_M_current == _M_bracket_end ||
-              *_M_current == *_M_end)
+              _M_current == _M_end)
         {
           __throw_regex_error(regex_constants::error_badbrace);
            _M_state &= ~_S_state_in_bracket;
@@ -449,7 +483,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
         {
           if(*_M_current == _M_esc) 
             {
-              if(*(_M_current + 1) == *_M_end)
+              if((_M_current + 1) == _M_end)
                 {
                   _M_state &= ~_S_state_in_bracket;
                   _M_state &= ~_S_state_at_start;
@@ -464,7 +498,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
                 }
             }
 
-          if(*_M_current == *_M_end) 
+          if(_M_current == _M_end) 
             {
               _M_state &= ~_S_state_in_bracket;
               __throw_regex_error(regex_constants::error_badbrace);
@@ -505,7 +539,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
           else if(*_M_current == _M_carret)
             {
               if(*(_M_current + 1) == _M_bracket_end || 
-                  *(_M_current + 1) == *_M_end)
+                  (_M_current + 1) == _M_end)
                 {
                   __throw_regex_error(regex_constants::error_badbrace);
                   _M_state &= ~_S_state_in_bracket;
