@@ -286,8 +286,8 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
     _Scanner<_InputIterator>::
     _M_charclass (const _StringT& __classname) const
     {
-      typename _MapT::iterator _class = _M_classnames.find();
-      return _class == _M_classnames.end()? _S_class_unknown: _class->second;
+      typename _MapT::const_iterator __class = _M_classnames.find(__classname);
+      return __class == _M_classnames.end()? _S_class_unknown: __class->second;
     }
 
   template<typename _InputIterator>
@@ -368,6 +368,18 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 	  _M_eat_escape();
 	  return;
 	}
+      else if (__c == _M_bracket_beg)
+        {
+          if (_M_current == _M_end)
+            {
+              __throw_regex_error(regex_constants::error_brack);
+              return;
+            }
+          _M_curToken = _S_token_bracket_begin;
+          _M_state |= (_S_state_in_bracket | _S_state_at_start);
+          ++_M_current;
+          return;
+        }
       else if (!(_M_flags & (regex_constants::basic | regex_constants::grep)))
 	{
 	  if (__c == _M_sub_beg)
@@ -396,18 +408,6 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 	    {
 	      _M_curToken = _S_token_interval_begin;
 	      _M_state |= _S_state_in_brace;
-	      ++_M_current;
-	      return;
-	    }
-          else if (__c == _M_bracket_beg)
-	    {
-              if (_M_current == _M_begin)
-                {
-                  __throw_regex_error(regex_constants::error_brack);
-                  return;
-                }
-	      _M_curToken = _S_token_bracket_begin;
-	      _M_state |= (_S_state_in_bracket | _S_state_at_start);
 	      ++_M_current;
 	      return;
 	    }
@@ -478,6 +478,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
       
       //_M_curValue += *(_M_current++);
+      bool __sddcan_interval = true;
       
       for(_M_state &= ~_S_state_at_start; _M_state & _S_state_in_bracket; _M_current++)
         {
@@ -515,15 +516,20 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
                   _M_curValue += *_M_current;
                   return;
                 }
-              else if(*(_M_current - 1) >= *(_M_current + 1))
+              if(*(_M_current - 1) == _M_bracket_beg) 
+                {
+                  _M_curValue += *_M_current;
+                  continue;
+                }
+
+              else if((*(_M_current - 1) >= *(_M_current + 1))
+                  && (*(_M_current - 2) != _M_dash))
                 {
                   __throw_regex_error(regex_constants::error_badbrace);
                   _M_state &= ~_S_state_in_bracket;
                 }
               else 
-                {
-                  _M_curValue += *_M_current;
-                }
+                _M_curValue += *_M_current;
             }
           else if (*_M_current == _M_bracket_beg)
             {
@@ -713,13 +719,24 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 	   _M_current != _M_end && *_M_current != _M_colon;
 	   ++_M_current)
 	_classname += *_M_current;
-      if (_M_classnames.find(_classname) == _M_classnames.end())
-	__throw_regex_error(regex_constants::error_ctype);
+
       if (_M_current == _M_end)
 	__throw_regex_error(regex_constants::error_ctype);
+
+      if (*(_M_current + 1) == _M_bracket_beg)
+	__throw_regex_error(regex_constants::error_ctype);
+
+      if (_M_classnames.find(_classname) == _M_classnames.end())
+	__throw_regex_error(regex_constants::error_ctype);
+
+      if (_M_current == _M_end)
+	__throw_regex_error(regex_constants::error_ctype);
+
+      //if (_M_)
       // skip ':'
       _M_curValue += _classname;
       _M_curValue += *(_M_current++);
+      _M_curValue += *(_M_current);
       //if (*_M_current != _M_bracket_end)
       // __throw_regex_error(regex_constants::error_ctype);
       //++_M_current;  skip ']'
@@ -961,6 +978,9 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       _CharT         _M_esc;
       _CharT         _M_carret;
       _CharT         _M_dash; 
+      _CharT         _M_colon;
+      _CharT         _M_bracket_beg;
+      _CharT         _M_bracket_end;
     };
 
   template<typename _InIter, typename _TraitsT>
@@ -978,6 +998,9 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       _M_esc = ctype.widen('\\'); 
       _M_carret = ctype.widen('^'); 
       _M_dash = ctype.widen('-'); 
+      _M_colon = ctype.widen(':');
+      _M_bracket_beg = ctype.widen('[');
+      _M_bracket_end = ctype.widen(']');
 
       _StateSeq __r(_M_state_store,
       		    _M_state_store._M_insert_subexpr_begin(_Start(0)));
@@ -1231,32 +1254,64 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       if (_M_match_token(_ScannerT::_S_token_bracket_begin))
 	{
           _M_TokenListT __ml;
-          bool          __negation = false;
-          bool          __escaped = false;
+          char __state = 0x0;
+          char __negation = 0x1;
+          char __escaped = (0x1 << 1);
+          char __scan_classname = (0x1 << 2);
+          char __dash = (0x1 << 3);
 
-          for (int i = 0; i< _M_cur_value.length(); i++)    
+          _StringT      __classname;
+
+          for (typename _StringT::iterator __chr = _M_cur_value.begin();
+              __chr != _M_cur_value.end(); __chr++)    
             {
-              if (!__escaped && _M_cur_value[i] == _M_esc)
+              if (!(__state & __escaped) && *__chr == _M_esc)
                 {
-                  __escaped = true;
+                  __state |= __escaped;
                   continue;
                 }
-              if (__escaped)
+
+              if (__escaped & __state)
+                __state &= ~__escaped;
+
+              if (*__chr == _M_carret) 
+                __state |= __negation;
+             
+              if (*__chr == _M_bracket_beg)
                 {
-                  __escaped = false;
+                  if (__escaped & __state) 
+                    continue;
+
+                  // skip ':'. 
+                  __chr++;
+                  __state |= __scan_classname;
+                  continue;
                 }
-              if (_M_cur_value[i] == _M_carret) 
+
+              if (__state & __scan_classname)
                 {
-                  __negation = true;
+                  if (*__chr == _M_colon)
+                    {
+                      __chr++;
+                      if (*__chr != _M_bracket_end)
+                        __throw_regex_error(regex_constants::error_brack);
+                      switch (_M_scanner._M_charclass(__classname))
+                        {
+                          default: __throw_regex_error(regex_constants::error_brack);
+                        }
+                    }
+                  else {
+                    __classname += *__chr;
+                  
+                  }
                 }
-              else if (_M_cur_value[i] == _M_dash) 
-                {
-                  __ml.push_back(_TokFactory(_M_cur_value[i-1], _M_cur_value[++i], __negation));
-                }
-              else if (_M_cur_value[i + 1] != _M_dash)
-                {
-                  __ml.push_back(_TokFactory(_M_cur_value[i], __negation));
-                }
+                  
+
+              else if (*__chr == _M_dash)
+                __ml.push_back(_TokFactory(*(__chr - 1), *(++__chr), (bool)(__negation & __state)));
+              
+              else if (*(__chr + 1) != _M_dash)
+                __ml.push_back(_TokFactory(*__chr, __negation));
             }
 
           _IMatcherT __matcher(__ml, _M_traits);
