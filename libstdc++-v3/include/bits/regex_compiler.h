@@ -981,6 +981,8 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       _CharT         _M_colon;
       _CharT         _M_bracket_beg;
       _CharT         _M_bracket_end;
+      _CharT         _M_char_a;
+      _CharT         _M_char_z;
     };
 
   template<typename _InIter, typename _TraitsT>
@@ -1001,6 +1003,8 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       _M_colon = ctype.widen(':');
       _M_bracket_beg = ctype.widen('[');
       _M_bracket_end = ctype.widen(']');
+      _M_char_a = ctype.widen('a');
+      _M_char_z = ctype.widen('z');
 
       _StateSeq __r(_M_state_store,
       		    _M_state_store._M_insert_subexpr_begin(_Start(0)));
@@ -1247,7 +1251,6 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       typedef std::pair<char_type, char_type>       _M_PairT;
       typedef std::vector<_TokenFactory<_TraitsT> > _M_TokenListT;
       typedef _TokenFactory<_TraitsT>               _TokFactory;
-      typedef const std::ctype<char_type>           _CtypeT;
 
       _CtypeT& ctype(std::use_facet<_CtypeT>(_M_traits.getloc()));
 
@@ -1297,16 +1300,16 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
                         __throw_regex_error(regex_constants::error_brack);
                       switch (_M_scanner._M_charclass(__classname))
                         {
+                          case _Scanner<_InIter>::_S_class_lower:
+                            __ml.push_back(_TokFactory(_M_char_a, _M_char_z, (bool)(__negation & __state)));
+ 
                           default: __throw_regex_error(regex_constants::error_brack);
                         }
                     }
-                  else {
+                  else
                     __classname += *__chr;
-                  
-                  }
                 }
                   
-
               else if (*__chr == _M_dash)
                 __ml.push_back(_TokFactory(*(__chr - 1), *(++__chr), (bool)(__negation & __state)));
               
