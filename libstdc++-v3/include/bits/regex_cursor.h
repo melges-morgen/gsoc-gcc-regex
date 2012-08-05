@@ -42,7 +42,9 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
     virtual bool _M_at_end() const = 0;
   };
 
-  // Provides a cursor into the specific target string.
+  /**
+    * @brief Provides a cursor into the specific target string.
+    */
   template<typename _FwdIterT>
     class _SpecializedCursor
     : public _PatternCursor
@@ -52,26 +54,45 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       : _M_b(__b), _M_c(__b), _M_e(__e)
       { }
 
+      /**
+        * @brief Function return current symbol of iterator
+        */
       typename std::iterator_traits<_FwdIterT>::value_type
       _M_current() const
       { return *_M_c; }
 
+      /**
+        * @brief The function takes an iterator to the next position
+        */
       void
       _M_next()
       { ++_M_c; }
-
+      
+      /**
+        * @brief The function returns a copy of the iterator
+        */
       _FwdIterT
       _M_pos() const
       { return _M_c; }
 
+      /**
+        * @brief The function returns an iterator pointing to the begin
+        */
       const _FwdIterT&
       _M_begin() const
       { return _M_b; }
 
+      /**
+        * @brief The function returns an iterator pointing to the end
+        */
       const _FwdIterT&
       _M_end() const
       { return _M_e; }
 
+      /** 
+        * @brief The function returns the state of being in the end of the data
+        * @return true if in the end, false otherwise
+        */ 
       bool
       _M_at_end() const
       { return _M_c == _M_e; }

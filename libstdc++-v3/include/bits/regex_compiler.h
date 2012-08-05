@@ -28,6 +28,8 @@
  *  Do not attempt to use it directly. @headername{regex}
  */
 
+#include <map>
+
 namespace std _GLIBCXX_VISIBILITY(default)
 {
 namespace __regex
@@ -108,10 +110,37 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 	_S_token_unknown
       };
 
+
+      /**
+        * @brief Char classes acceptable by scanner.
+        */
+      enum _CharClassT
+      {
+        _S_class_alpha,
+        _S_class_ascii,
+        _S_class_blank,
+        _S_class_cntrl,
+        _S_class_digit,
+        _S_class_graph,
+        _S_class_lower,
+        _S_class_print,
+        _S_class_punct,
+        _S_class_space,
+        _S_class_upper,
+        _S_class_word,
+        _S_class_alnum,
+        _S_class_xdigit,
+        _S_class_unknown
+      };
+
+      typedef std::map<_StringT, _CharClassT>                       _MapT;
+      typedef std::pair<std::string, _CharClassT>                   _ClassPairT;
+
+
     public:
       _Scanner(_IteratorT __begin, _IteratorT __end, _FlagT __flags,
 	       std::locale __loc)
-      : _M_current(__begin) , _M_end(__end) , _M_flags(__flags),
+      : _M_begin(__begin), _M_current(__begin) , _M_end(__end) , _M_flags(__flags),
         _M_ctype(std::use_facet<_CtypeT>(__loc)), _M_state(_S_state_at_start)
       { 
         _M_dot = _M_ctype.widen('.');
@@ -125,7 +154,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
         _M_sub_end = _M_ctype.widen(')');
         _M_brace_beg = _M_ctype.widen('{');
         _M_brace_end = _M_ctype.widen('}');
-        _M_comma = _M_ctype.widen('{');
+        _M_comma = _M_ctype.widen(',');
         _M_carret = _M_ctype.widen('^');
         _M_dash = _M_ctype.widen('-');
         _M_eof = _M_ctype.widen('x');
@@ -133,7 +162,38 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
         _M_colon = _M_ctype.widen(':');
         _M_equals = _M_ctype.widen('=');
 
-        _M_advance(); }
+        // init of names of char classes.
+        std::vector<_ClassPairT > _names;
+        _names.push_back(_ClassPairT("alnum", _S_class_alnum));
+        _names.push_back(_ClassPairT("alpha", _S_class_alpha));
+        _names.push_back(_ClassPairT("ascii", _S_class_ascii));
+        _names.push_back(_ClassPairT("blank", _S_class_blank));
+        _names.push_back(_ClassPairT("digit", _S_class_digit));
+        _names.push_back(_ClassPairT("graph", _S_class_graph));
+        _names.push_back(_ClassPairT("lower", _S_class_lower));
+        _names.push_back(_ClassPairT("print", _S_class_print));
+        _names.push_back(_ClassPairT("punct", _S_class_punct));
+        _names.push_back(_ClassPairT("space", _S_class_space));
+        _names.push_back(_ClassPairT("upper", _S_class_upper));
+        _names.push_back(_ClassPairT("word", _S_class_word));
+        _names.push_back(_ClassPairT("xdigit", _S_class_xdigit));
+
+        for (typename std::vector<_ClassPairT>::iterator _str = _names.begin();
+            _str != _names.end();
+            _str++)
+          {
+             _StringT _current;
+             for (std::string::iterator _ch = _str->first.begin();
+                 _ch != _str->first.end();
+                 _ch++)
+               _current += _M_ctype.widen(*_ch);
+
+             _M_classnames[_current] = _str->second;
+          }
+
+       
+        _M_advance();
+      }
 
       /**
         * @brief Function determines the Tokens for the current symbol and calls
@@ -143,14 +203,23 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       _M_advance();
       
       /** 
-        * @brief Function return current token stored in scanner
+        * @brief _M_curToken getter.
+        * @return current token stored in scanner
         */
       _TokenT
       _M_token() const
       { return _M_curToken; }
-      
+
+      /**
+        * @brief checks if __classname is valid char class name.
+        * @return correspoding char class or _S_class_unknown.
+        */
+      _CharClassT
+      _M_charclass (const _StringT& __classname) const; 
+
       /** 
-        * @brief Function return current character stored in scanner
+        * @brief _M_curValue getter.
+        * @return current character stored in scanner
         */
       const _StringT&
       _M_value() const
@@ -181,6 +250,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       _M_eat_collsymbol();
 
     private:
+      // cached tokens.
       _CharT      _M_dot;
       _CharT      _M_star;
       _CharT      _M_plus;
@@ -199,14 +269,26 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       _CharT      _M_eol;
       _CharT      _M_colon;
       _CharT      _M_equals;
+      // char classes names.
+      _MapT       _M_classnames;
       _IteratorT  _M_current;
       _IteratorT  _M_end;
+      _IteratorT  _M_begin;
       _FlagT      _M_flags;
       _CtypeT&    _M_ctype;
       _TokenT     _M_curToken;
       _StringT    _M_curValue;
       _StateT     _M_state;
     };
+
+  template<typename _InputIterator>
+    typename _Scanner<_InputIterator>::_CharClassT
+    _Scanner<_InputIterator>::
+    _M_charclass (const _StringT& __classname) const
+    {
+      typename _MapT::const_iterator __class = _M_classnames.find(__classname);
+      return __class == _M_classnames.end()? _S_class_unknown: __class->second;
+    }
 
   template<typename _InputIterator>
     void
@@ -254,12 +336,22 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 	}
       else if (__c == _M_star)
 	{
+          if (_M_current == _M_begin)
+            {
+              __throw_regex_error(regex_constants::error_badrepeat);
+              return;
+            }
 	  _M_curToken = _S_token_closure0;
 	  ++_M_current;
 	  return;
 	}
       else if (__c == _M_plus)
 	{
+          if (_M_current == _M_begin)
+            {
+              __throw_regex_error(regex_constants::error_badrepeat);
+              return;
+            }
 	  _M_curToken = _S_token_closure1;
 	  ++_M_current;
 	  return;
@@ -271,28 +363,43 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 	  return;
 
         }
-      else if (__c == _M_bracket_beg)
-	{
-	  _M_curToken = _S_token_bracket_begin;
-	  _M_state |= (_S_state_in_bracket | _S_state_at_start);
-	  ++_M_current;
-	  return;
-	}
       else if (__c == _M_esc)
 	{
 	  _M_eat_escape();
 	  return;
 	}
+      else if (__c == _M_bracket_beg)
+        {
+          if (_M_current == _M_end)
+            {
+              __throw_regex_error(regex_constants::error_brack);
+              return;
+            }
+          _M_curToken = _S_token_bracket_begin;
+          _M_state |= (_S_state_in_bracket | _S_state_at_start);
+          ++_M_current;
+          return;
+        }
       else if (!(_M_flags & (regex_constants::basic | regex_constants::grep)))
 	{
 	  if (__c == _M_sub_beg)
 	    {
+              if ((_M_current + 1) == _M_end)
+                {
+                  __throw_regex_error(regex_constants::error_stack);
+	          return;
+                }
 	      _M_curToken = _S_token_subexpr_begin;
 	      ++_M_current;
 	      return;
 	    }
 	  else if (__c == _M_sub_end)
 	    {
+              if (_M_current == _M_begin)
+                {
+                  __throw_regex_error(regex_constants::error_stack);
+	          return;
+                }
 	      _M_curToken = _S_token_subexpr_end;
 	      ++_M_current;
 	      return;
@@ -360,45 +467,30 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
     {
       _M_curToken = _S_token_bracket_end;
 
-      if(*_M_current == _M_carret)
-        {
-          if(*(_M_current + 1) == _M_bracket_end || 
-              *(_M_current + 1) == *_M_end)
-            {
-              __throw_regex_error(regex_constants::error_badbrace);
-              _M_state &= ~_S_state_in_bracket;
-              _M_state &= ~_S_state_at_start;
-              return;
-            }
-          
-        }
-      else if(*_M_current == _M_bracket_end ||
-              *_M_current == *_M_end)
+      if(*_M_current == _M_bracket_end ||
+              _M_current == _M_end)
         {
           __throw_regex_error(regex_constants::error_badbrace);
            _M_state &= ~_S_state_in_bracket;
            _M_state &= ~_S_state_at_start;
           return;
-        } else if(*_M_current == _M_esc)
-          {
-            if(*(_M_current + 1) == *_M_end)
-              {
-                _M_state &= ~_S_state_in_bracket;
-                _M_state &= ~_S_state_at_start;
-                 __throw_regex_error(regex_constants::error_badbrace);
-                return;
-              }
-                _M_curValue += *(_M_current++);
-          }
+        }
+
       
-      _M_curValue += *(_M_current++);
+      //_M_curValue += *(_M_current++);
+      bool __sddcan_interval = true;
       
       for(_M_state &= ~_S_state_at_start; _M_state & _S_state_in_bracket; _M_current++)
         {
           if(*_M_current == _M_esc) 
             {
-              if(*(_M_current + 1) == *_M_end)
-                continue;
+              if((_M_current + 1) == _M_end)
+                {
+                  _M_state &= ~_S_state_in_bracket;
+                  _M_state &= ~_S_state_at_start;
+                  __throw_regex_error(regex_constants::error_badbrace);
+                  return;
+                }
               else
                 {
                   _M_curValue += *_M_current++;
@@ -407,7 +499,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
                 }
             }
 
-          if(*_M_current == *_M_end) 
+          if(_M_current == _M_end) 
             {
               _M_state &= ~_S_state_in_bracket;
               __throw_regex_error(regex_constants::error_badbrace);
@@ -424,15 +516,45 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
                   _M_curValue += *_M_current;
                   return;
                 }
-              else if(*(_M_current - 1) >= *(_M_current + 1))
+              if(*(_M_current - 1) == _M_bracket_beg) 
+                {
+                  _M_curValue += *_M_current;
+                  continue;
+                }
+
+              else if((*(_M_current - 1) >= *(_M_current + 1))
+                  && (*(_M_current - 2) != _M_dash))
                 {
                   __throw_regex_error(regex_constants::error_badbrace);
                   _M_state &= ~_S_state_in_bracket;
                 }
               else 
+                _M_curValue += *_M_current;
+            }
+          else if (*_M_current == _M_bracket_beg)
+            {
+              // skip '['
+              _M_curValue += *(_M_current++);
+              if (*_M_current == _M_colon)
+                _M_eat_charclass();
+              else if (*_M_current == _M_equals)
+                _M_eat_equivclass();
+              else
+                __throw_regex_error(regex_constants::error_badbrace);
+            }
+          else if(*_M_current == _M_carret)
+            {
+              if(*(_M_current + 1) == _M_bracket_end || 
+                  (_M_current + 1) == _M_end)
                 {
-                  _M_curValue += *_M_current;
+                  __throw_regex_error(regex_constants::error_badbrace);
+                  _M_state &= ~_S_state_in_bracket;
+                  _M_state &= ~_S_state_at_start;
+                  return;
                 }
+              else
+                _M_curValue += *_M_current;
+          
             }
           else
             {
@@ -584,19 +706,40 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
     _Scanner<_InputIterator>::
     _M_eat_charclass()
     {
-      ++_M_current; // skip ':'
+      typedef std::basic_string<_CharT> _StringT;
+
       if (_M_current == _M_end)
 	__throw_regex_error(regex_constants::error_ctype);
-      for (_M_curValue.clear();
+
+      // skip ':'
+      _M_curValue += *(_M_current++);
+
+      _StringT _classname;
+      for (;
 	   _M_current != _M_end && *_M_current != _M_colon;
 	   ++_M_current)
-	_M_curValue += *_M_current;
+	_classname += *_M_current;
+
       if (_M_current == _M_end)
 	__throw_regex_error(regex_constants::error_ctype);
-      ++_M_current; // skip ':'
-      if (*_M_current != _M_bracket_end)
+
+      if (*(_M_current + 1) == _M_bracket_beg)
 	__throw_regex_error(regex_constants::error_ctype);
-      ++_M_current; // skip ']'
+
+      if (_M_classnames.find(_classname) == _M_classnames.end())
+	__throw_regex_error(regex_constants::error_ctype);
+
+      if (_M_current == _M_end)
+	__throw_regex_error(regex_constants::error_ctype);
+
+      //if (_M_)
+      // skip ':'
+      _M_curValue += _classname;
+      _M_curValue += *(_M_current++);
+      _M_curValue += *(_M_current);
+      //if (*_M_current != _M_bracket_end)
+      // __throw_regex_error(regex_constants::error_ctype);
+      //++_M_current;  skip ']'
     }
 
 
@@ -647,6 +790,8 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
     _Scanner<_InputIterator>::
     _M_print(std::ostream& ostr)
     {
+      ostr << "Symbol " << *_M_current <<"\n";
+      ostr << "Token:\n";
       switch (_M_curToken)
       {
 	case _S_token_anychar:
@@ -740,7 +885,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
   /**
     * @brief Builds an NFA from an input iterator interval.
-    * @todo
+    * @doctodo
     */
   template<typename _InIter, typename _TraitsT>
     class _Compiler
@@ -761,6 +906,11 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       const _Nfa&
       _M_nfa() const
       { return _M_state_store; }
+
+#ifdef _GLIBCXX_DEBUG
+      std::ostream&
+      _M_print(std::ostream&);
+#endif
 
     private:
       typedef _Scanner<_InIter>                              _ScannerT;
@@ -835,6 +985,9 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       _CharT         _M_esc;
       _CharT         _M_carret;
       _CharT         _M_dash; 
+      _CharT         _M_colon;
+      _CharT         _M_bracket_beg;
+      _CharT         _M_bracket_end;
     };
 
   template<typename _InIter, typename _TraitsT>
@@ -852,6 +1005,9 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       _M_esc = ctype.widen('\\'); 
       _M_carret = ctype.widen('^'); 
       _M_dash = ctype.widen('-'); 
+      _M_colon = ctype.widen(':');
+      _M_bracket_beg = ctype.widen('[');
+      _M_bracket_end = ctype.widen(']');
 
       _StateSeq __r(_M_state_store,
       		    _M_state_store._M_insert_subexpr_begin(_Start(0)));
@@ -1105,32 +1261,64 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       if (_M_match_token(_ScannerT::_S_token_bracket_begin))
 	{
           _M_TokenListT __ml;
-          bool          __negation = false;
-          bool          __escaped = false;
+          char __state = 0x0;
+          char __negation = 0x1;
+          char __escaped = (0x1 << 1);
+          char __scan_classname = (0x1 << 2);
+          char __dash = (0x1 << 3);
 
-          for (int i = 0; i< _M_cur_value.length(); i++)    
+          _StringT      __classname;
+
+          for (typename _StringT::iterator __chr = _M_cur_value.begin();
+              __chr != _M_cur_value.end(); __chr++)    
             {
-              if (!__escaped && _M_cur_value[i] == _M_esc)
+              if (!(__state & __escaped) && *__chr == _M_esc)
                 {
-                  __escaped = true;
+                  __state |= __escaped;
                   continue;
                 }
-              if (__escaped)
+
+              if (__escaped & __state)
+                __state &= ~__escaped;
+
+              if (*__chr == _M_carret) 
+                __state |= __negation;
+             
+              if (*__chr == _M_bracket_beg)
                 {
-                  __escaped = false;
+                  if (__escaped & __state) 
+                    continue;
+
+                  // skip ':'. 
+                  __chr++;
+                  __state |= __scan_classname;
+                  continue;
                 }
-              if (_M_cur_value[i] == _M_carret) 
+
+              if (__state & __scan_classname)
                 {
-                  __negation = true;
+                  if (*__chr == _M_colon)
+                    {
+                      __chr++;
+                      if (*__chr != _M_bracket_end)
+                        __throw_regex_error(regex_constants::error_brack);
+                      switch (_M_scanner._M_charclass(__classname))
+                        {
+                          default: __throw_regex_error(regex_constants::error_brack);
+                        }
+                    }
+                  else {
+                    __classname += *__chr;
+                  
+                  }
                 }
-              else if (_M_cur_value[i] == _M_dash) 
-                {
-                  __ml.push_back(_TokFactory(_M_cur_value[i-1], _M_cur_value[++i], __negation));
-                }
-              else if (_M_cur_value[i + 1] != _M_dash)
-                {
-                  __ml.push_back(_TokFactory(_M_cur_value[i], __negation));
-                }
+                  
+
+              else if (*__chr == _M_dash)
+                __ml.push_back(_TokFactory(*(__chr - 1), *(++__chr), (bool)(__negation & __state)));
+              
+              else if (*(__chr + 1) != _M_dash)
+                __ml.push_back(_TokFactory(*__chr, __negation));
             }
 
           _IMatcherT __matcher(__ml, _M_traits);
@@ -1262,6 +1450,18 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 	__v =__v * __radix + _M_traits.value(_M_cur_value[__i], __radix);
       return __v;
     }
+
+#ifdef _GLIBCXX_DEBUG
+  template<typename _InIter, typename _TraitsT>
+    std::ostream&
+    _Compiler<_InIter, _TraitsT>::
+    _M_print(std::ostream& ostr)
+    {
+      ostream << "Top of _Compiler::_M_stack: " << _M_stack.top(); << "\n";
+      ostream << "_M_cur_value: " << _M_cur_value << "\n";      
+      ostrean << "_M_stack.size: " << _M_stack.size() << '\n'; 
+    }
+#endif
 
   template<typename _InIter, typename _TraitsT>
     _AutomatonPtr
