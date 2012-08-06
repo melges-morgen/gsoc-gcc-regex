@@ -63,7 +63,9 @@ _M_print(std::ostream& ostr) const
   return ostr;
 }
 
-// Prints graphviz dot commands for state.
+/* 
+ * @brief: Prints graphviz dot commands for state.
+ */
 inline std::ostream& _State::
 _M_dot(std::ostream& __ostr, _StateIdT __id) const
 {

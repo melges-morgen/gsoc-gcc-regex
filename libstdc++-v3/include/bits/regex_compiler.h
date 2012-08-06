@@ -304,6 +304,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       _CharT __c = *_M_current;
       if (_M_state & _S_state_in_bracket)
 	{
+          //_M_current++;
 	  _M_scan_in_bracket();
 	  return;
 	}
@@ -465,6 +466,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
     _Scanner<_InputIterator>::
     _M_scan_in_bracket()
     {
+      _M_curValue.clear();
       _M_curToken = _S_token_bracket_end;
 
       if(*_M_current == _M_bracket_end ||
@@ -476,9 +478,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
           return;
         }
 
-      
-      //_M_curValue += *(_M_current++);
-      bool __sddcan_interval = true;
+      bool __scan_classname = false;
       
       for(_M_state &= ~_S_state_at_start; _M_state & _S_state_in_bracket; _M_current++)
         {
@@ -508,6 +508,22 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
             {
               _M_state &= ~_S_state_in_bracket;
             }
+          else if(*_M_current == _M_bracket_beg)
+            {
+              if (__scan_classname)
+                __throw_regex_error(regex_constants::error_badbrace);
+
+              _M_current++;
+              if (*_M_current != _M_colon)
+                __throw_regex_error(regex_constants::error_badbrace);
+
+              __scan_classname == true;
+            }
+          else if (*_M_current == _M_colon)
+            {
+              if ((*_M_current + 1) == _M_bracket_end)
+                __scan_classname = false;
+            }
           else if(*_M_current == _M_dash)
             {
               if(*(_M_current + 1) == _M_bracket_end) 
@@ -531,9 +547,8 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
               else 
                 _M_curValue += *_M_current;
             }
-          else if (*_M_current == _M_bracket_beg)
+/*          else if (*_M_current == _M_bracket_beg)
             {
-              // skip '['
               _M_curValue += *(_M_current++);
               if (*_M_current == _M_colon)
                 _M_eat_charclass();
@@ -541,7 +556,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
                 _M_eat_equivclass();
               else
                 __throw_regex_error(regex_constants::error_badbrace);
-            }
+            }*/
           else if(*_M_current == _M_carret)
             {
               if(*(_M_current + 1) == _M_bracket_end || 
@@ -1296,8 +1311,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
                   if (*__chr == _M_colon)
                     {
                       __chr++;
-                      if (*__chr != _M_bracket_end)
-                        __throw_regex_error(regex_constants::error_brack);
+
                       switch (_M_scanner._M_charclass(__classname))
                         {
                           case _Scanner<_InIter>::_S_class_lower:
@@ -1311,8 +1325,11 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
                 }
                   
               else if (*__chr == _M_dash)
-                __ml.push_back(_TokFactory(*(__chr - 1), *(++__chr), (bool)(__negation & __state)));
+                if ((__chr + 1) != _M_cur_value.end())
+                  __ml.push_back(_TokFactory(*(__chr - 1), *(++__chr), (bool)(__negation & __state)));
               
+                else
+                  __ml.push_back(_TokFactory(*__chr, __negation));
               else if (*(__chr + 1) != _M_dash)
                 __ml.push_back(_TokFactory(*__chr, __negation));
             }
