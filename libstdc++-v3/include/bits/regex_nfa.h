@@ -51,8 +51,19 @@ public:
   _M_sub_count() const = 0;
 
 #ifdef _GLIBCXX_DEBUG
+  /**
+   * @brief Method for printing current automat graph to graphviz format
+   * @return stream with debug output
+   */
   virtual std::ostream&
   _M_dot(std::ostream& __ostr) const = 0;
+
+  /**
+   * @brief  Method for printing current state
+   * @return Stream with debug information
+   */
+  virtual std::ostream&
+  _M_print(std::ostream& __ostr) const = 0;
 #endif
 };
 
@@ -627,6 +638,9 @@ template<typename _InIterT, typename _TraitsT>
     }
 
 #ifdef _GLIBCXX_DEBUG
+    std::ostream& 
+    _M_print(std::ostream& __ostr) const;
+
     std::ostream&
     _M_dot(std::ostream& __ostr) const;
 #endif

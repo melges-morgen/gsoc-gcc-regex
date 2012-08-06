@@ -805,6 +805,8 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
     _Scanner<_InputIterator>::
     _M_print(std::ostream& ostr)
     {
+      ostr << "Symbol " << *_M_current <<"\n";
+      ostr << "Token:\n";
       switch (_M_curToken)
       {
 	case _S_token_anychar:
@@ -919,6 +921,11 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       const _Nfa&
       _M_nfa() const
       { return _M_state_store; }
+
+#ifdef _GLIBCXX_DEBUG
+      std::ostream&
+      _M_print(std::ostream&);
+#endif
 
     private:
       typedef _Scanner<_InIter>                              _ScannerT;
@@ -1463,6 +1470,18 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 	__v =__v * __radix + _M_traits.value(_M_cur_value[__i], __radix);
       return __v;
     }
+
+#ifdef _GLIBCXX_DEBUG
+  template<typename _InIter, typename _TraitsT>
+    std::ostream&
+    _Compiler<_InIter, _TraitsT>::
+    _M_print(std::ostream& ostr)
+    {
+      ostream << "Top of _Compiler::_M_stack: " << _M_stack.top(); << "\n";
+      ostream << "_M_cur_value: " << _M_cur_value << "\n";      
+      ostrean << "_M_stack.size: " << _M_stack.size() << '\n'; 
+    }
+#endif
 
   template<typename _InIter, typename _TraitsT>
     _AutomatonPtr
